@@ -1,0 +1,457 @@
+{
+  "updatedAt": "2026-11-15T01:34:36.669589+00:00",
+  "latestDate": "2026-11-11",
+  "totalTradingDays": 2393,
+  "plans": {
+    "แผนเชิงรุก 20": {
+      "key": "แผนเชิงรุก 20",
+      "category": "active",
+      "color": "#00BCD4",
+      "latestNav": 30.8801,
+      "prevNav": 30.7851,
+      "change": 0.095,
+      "changePct": 0.31,
+      "returns": {
+        "1D": 0.31,
+        "1M": -0.42,
+        "3M": -0.64,
+        "6M": 0.89,
+        "1Y": 4.23,
+        "YTD": 4.29,
+        "3Y_cumulative": 15.8,
+        "3Y_annualized": 5.01,
+        "5Y_cumulative": 14.92,
+        "5Y_annualized": 2.82,
+        "allTime": 41.32
+      },
+      "ath": {
+        "nav": 31.143,
+        "date": "2026-08-14"
+      },
+      "atl": {
+        "nav": 21.8412,
+        "date": "2017-01-18"
+      }
+    },
+    "แผนเชิงรุก 35": {
+      "key": "แผนเชิงรุก 35",
+      "category": "active",
+      "color": "#2196F3",
+      "latestNav": 36.5238,
+      "prevNav": 36.3204,
+      "change": 0.2034,
+      "changePct": 0.56,
+      "returns": {
+        "1D": 0.56,
+        "1M": -1.08,
+        "3M": -0.81,
+        "6M": 1.44,
+        "1Y": 6.83,
+        "YTD": 7.27,
+        "3Y_cumulative": 21.2,
+        "3Y_annualized": 6.62,
+        "5Y_cumulative": 17.07,
+        "5Y_annualized": 3.2,
+        "allTime": 52.09
+      },
+      "ath": {
+        "nav": 36.9949,
+        "date": "2026-10-05"
+      },
+      "atl": {
+        "nav": 23.9715,
+        "date": "2017-01-19"
+      }
+    },
+    "แผนเชิงรุก 65": {
+      "key": "แผนเชิงรุก 65",
+      "category": "active",
+      "color": "#E91E63",
+      "latestNav": 44.868,
+      "prevNav": 44.4214,
+      "change": 0.4466,
+      "changePct": 1.01,
+      "returns": {
+        "1D": 1.01,
+        "1M": -2.45,
+        "3M": -1.27,
+        "6M": 2.48,
+        "1Y": 12.46,
+        "YTD": 13.28,
+        "3Y_cumulative": 36.19,
+        "3Y_annualized": 10.84,
+        "5Y_cumulative": 25.31,
+        "5Y_annualized": 4.62,
+        "allTime": 81.45
+      },
+      "ath": {
+        "nav": 46.2225,
+        "date": "2026-10-05"
+      },
+      "atl": {
+        "nav": 24.6738,
+        "date": "2017-01-19"
+      }
+    },
+    "แผนเชิงรุก 75": {
+      "key": "แผนเชิงรุก 75",
+      "category": "active",
+      "color": "#8BC34A",
+      "latestNav": 38.6406,
+      "prevNav": 38.212,
+      "change": 0.4286,
+      "changePct": 1.12,
+      "returns": {
+        "1D": 1.12,
+        "1M": -2.82,
+        "3M": -1.43,
+        "6M": 2.65,
+        "1Y": 13.63,
+        "YTD": 14.69,
+        "3Y_cumulative": 38.48,
+        "3Y_annualized": 11.46,
+        "5Y_cumulative": null,
+        "5Y_annualized": null,
+        "allTime": 41.73
+      },
+      "ath": {
+        "nav": 39.992,
+        "date": "2026-10-05"
+      },
+      "atl": {
+        "nav": 27.2614,
+        "date": "2023-03-20"
+      }
+    },
+    "แผนเงินฝากและตราสารหนี้ระยะสั้น": {
+      "key": "แผนเงินฝากและตราสารหนี้ระยะสั้น",
+      "category": "fixed_income",
+      "color": "#607D8B",
+      "latestNav": 21.7064,
+      "prevNav": 21.705,
+      "change": 0.0014,
+      "changePct": 0.01,
+      "returns": {
+        "1D": 0.01,
+        "1M": 0.09,
+        "3M": 0.24,
+        "6M": 0.48,
+        "1Y": 1.21,
+        "YTD": 0.96,
+        "3Y_cumulative": 5.85,
+        "3Y_annualized": 1.91,
+        "5Y_cumulative": 8.0,
+        "5Y_annualized": 1.55,
+        "allTime": 15.09
+      },
+      "ath": {
+        "nav": 21.7064,
+        "date": "2026-11-11"
+      },
+      "atl": {
+        "nav": 18.8597,
+        "date": "2017-01-04"
+      }
+    },
+    "แผนตราสารหนี้": {
+      "key": "แผนตราสารหนี้",
+      "category": "fixed_income",
+      "color": "#FF9800",
+      "latestNav": 24.4777,
+      "prevNav": 24.488,
+      "change": -0.0103,
+      "changePct": -0.04,
+      "returns": {
+        "1D": -0.04,
+        "1M": 0.73,
+        "3M": 0.5,
+        "6M": 1.32,
+        "1Y": 1.42,
+        "YTD": 0.77,
+        "3Y_cumulative": 9.94,
+        "3Y_annualized": 3.21,
+        "5Y_cumulative": 11.12,
+        "5Y_annualized": 2.13,
+        "allTime": 23.84
+      },
+      "ath": {
+        "nav": 24.488,
+        "date": "2026-11-10"
+      },
+      "atl": {
+        "nav": 19.7469,
+        "date": "2017-01-09"
+      }
+    },
+    "แผนตราสารหนี้ต่างประเทศ": {
+      "key": "แผนตราสารหนี้ต่างประเทศ",
+      "category": "fixed_income",
+      "color": "#009688",
+      "latestNav": 27.9238,
+      "prevNav": 27.9402,
+      "change": -0.0164,
+      "changePct": -0.06,
+      "returns": {
+        "1D": -0.06,
+        "1M": 1.05,
+        "3M": -0.96,
+        "6M": -1.14,
+        "1Y": -2.14,
+        "YTD": -1.43,
+        "3Y_cumulative": 4.56,
+        "3Y_annualized": 1.5,
+        "5Y_cumulative": null,
+        "5Y_annualized": null,
+        "allTime": 1.78
+      },
+      "ath": {
+        "nav": 28.7123,
+        "date": "2025-10-22"
+      },
+      "atl": {
+        "nav": 26.3706,
+        "date": "2023-10-19"
+      }
+    },
+    "แผนหุ้นไทย": {
+      "key": "แผนหุ้นไทย",
+      "category": "equity",
+      "color": "#F44336",
+      "latestNav": 29.9668,
+      "prevNav": 29.8525,
+      "change": 0.1143,
+      "changePct": 0.38,
+      "returns": {
+        "1D": 0.38,
+        "1M": -2.34,
+        "3M": -3.32,
+        "6M": 6.87,
+        "1Y": 30.58,
+        "YTD": 30.71,
+        "3Y_cumulative": 28.52,
+        "3Y_annualized": 8.72,
+        "5Y_cumulative": 20.83,
+        "5Y_annualized": 3.86,
+        "allTime": 25.36
+      },
+      "ath": {
+        "nav": 31.7017,
+        "date": "2026-09-23"
+      },
+      "atl": {
+        "nav": 16.1717,
+        "date": "2020-03-23"
+      }
+    },
+    "แผนหุ้นต่างประเทศ": {
+      "key": "แผนหุ้นต่างประเทศ",
+      "category": "equity",
+      "color": "#9C27B0",
+      "latestNav": 37.93,
+      "prevNav": 37.2285,
+      "change": 0.7015,
+      "changePct": 1.88,
+      "returns": {
+        "1D": 1.88,
+        "1M": -5.32,
+        "3M": -3.01,
+        "6M": 1.71,
+        "1Y": 16.82,
+        "YTD": 18.66,
+        "3Y_cumulative": 66.61,
+        "3Y_annualized": 18.55,
+        "5Y_cumulative": null,
+        "5Y_annualized": null,
+        "allTime": 37.71
+      },
+      "ath": {
+        "nav": 40.5474,
+        "date": "2026-10-05"
+      },
+      "atl": {
+        "nav": 21.3875,
+        "date": "2023-03-20"
+      }
+    },
+    "แผนกองทุนอสังหาริมทรัพย์ไทย": {
+      "key": "แผนกองทุนอสังหาริมทรัพย์ไทย",
+      "category": "equity",
+      "color": "#FF5722",
+      "latestNav": 27.8872,
+      "prevNav": 27.9223,
+      "change": -0.0351,
+      "changePct": -0.13,
+      "returns": {
+        "1D": -0.13,
+        "1M": 1.77,
+        "3M": -1.95,
+        "6M": 6.79,
+        "1Y": 19.4,
+        "YTD": 13.63,
+        "3Y_cumulative": 41.23,
+        "3Y_annualized": 12.2,
+        "5Y_cumulative": 13.73,
+        "5Y_annualized": 2.61,
+        "allTime": 10.43
+      },
+      "ath": {
+        "nav": 28.7201,
+        "date": "2026-08-21"
+      },
+      "atl": {
+        "nav": 18.7156,
+        "date": "2024-07-03"
+      }
+    },
+    "แผนทองคำ": {
+      "key": "แผนทองคำ",
+      "category": "special",
+      "color": "#FFC107",
+      "latestNav": 56.4651,
+      "prevNav": 56.7186,
+      "change": -0.2535,
+      "changePct": -0.45,
+      "returns": {
+        "1D": -0.45,
+        "1M": -4.28,
+        "3M": -7.25,
+        "6M": -11.74,
+        "1Y": 1.96,
+        "YTD": -2.48,
+        "3Y_cumulative": 90.03,
+        "3Y_annualized": 23.86,
+        "5Y_cumulative": null,
+        "5Y_annualized": null,
+        "allTime": 104.54
+      },
+      "ath": {
+        "nav": 70.8662,
+        "date": "2026-03-02"
+      },
+      "atl": {
+        "nav": 26.9373,
+        "date": "2023-02-24"
+      }
+    },
+    "แผนกองทุนรวมวายุภักษ์": {
+      "key": "แผนกองทุนรวมวายุภักษ์",
+      "category": "special",
+      "color": "#3F51B5",
+      "latestNav": 12.0396,
+      "prevNav": 12.0396,
+      "change": 0.0,
+      "changePct": 0.0,
+      "returns": {
+        "1D": 0.0,
+        "1M": 0.9,
+        "3M": -2.63,
+        "6M": 1.26,
+        "1Y": 11.29,
+        "YTD": 10.28,
+        "3Y_cumulative": null,
+        "3Y_annualized": null,
+        "5Y_cumulative": null,
+        "5Y_annualized": null,
+        "allTime": 20.4
+      },
+      "ath": {
+        "nav": 12.4722,
+        "date": "2026-07-21"
+      },
+      "atl": {
+        "nav": 9.9963,
+        "date": "2024-12-23"
+      }
+    },
+    "แผนการลงทุนตามหลักชะรีอะฮ์": {
+      "key": "แผนการลงทุนตามหลักชะรีอะฮ์",
+      "category": "special",
+      "color": "#FF6F00",
+      "latestNav": 11.7985,
+      "prevNav": 11.5514,
+      "change": 0.2471,
+      "changePct": 2.14,
+      "returns": {
+        "1D": 2.14,
+        "1M": -2.91,
+        "3M": -0.81,
+        "6M": 2.58,
+        "1Y": null,
+        "YTD": 18.09,
+        "3Y_cumulative": null,
+        "3Y_annualized": null,
+        "5Y_cumulative": null,
+        "5Y_annualized": null,
+        "allTime": 17.99
+      },
+      "ath": {
+        "nav": 12.3143,
+        "date": "2026-10-05"
+      },
+      "atl": {
+        "nav": 9.8049,
+        "date": "2025-12-24"
+      }
+    },
+    "แผนลงทุนพื้นฐานทั่วไป": {
+      "key": "แผนลงทุนพื้นฐานทั่วไป",
+      "category": "special",
+      "color": "#4CAF50",
+      "latestNav": 32.2207,
+      "prevNav": 32.0302,
+      "change": 0.1905,
+      "changePct": 0.59,
+      "returns": {
+        "1D": 0.59,
+        "1M": -1.06,
+        "3M": -0.72,
+        "6M": 1.47,
+        "1Y": 6.46,
+        "YTD": 6.94,
+        "3Y_cumulative": 17.6,
+        "3Y_annualized": 5.55,
+        "5Y_cumulative": 16.02,
+        "5Y_annualized": 3.02,
+        "allTime": 43.23
+      },
+      "ath": {
+        "nav": 32.6171,
+        "date": "2026-10-05"
+      },
+      "atl": {
+        "nav": 22.4802,
+        "date": "2017-01-19"
+      }
+    },
+    "แผนเกษียณสบายใจ 2569": {
+      "key": "แผนเกษียณสบายใจ 2569",
+      "category": "special",
+      "color": "#FF6F00",
+      "latestNav": null,
+      "prevNav": null,
+      "change": null,
+      "changePct": null,
+      "returns": {
+        "1D": null,
+        "1M": null,
+        "3M": null,
+        "6M": null,
+        "1Y": null,
+        "YTD": null,
+        "3Y_cumulative": null,
+        "3Y_annualized": null,
+        "5Y_cumulative": null,
+        "5Y_annualized": null,
+        "allTime": null
+      },
+      "ath": {
+        "nav": 28.6296,
+        "date": "2024-09-17"
+      },
+      "atl": {
+        "nav": 10.0,
+        "date": "2025-12-01"
+      }
+    }
+  }
+}

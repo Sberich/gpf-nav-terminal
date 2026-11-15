@@ -1,0 +1,568 @@
+/**
+ * components.css - Trading Terminal Component Styling
+ * High-density styles for Financial Ticker HUD and Watchlist Sidebar.
+ */
+
+/* ==========================================================================
+   1. Financial Ticker HUD (.metric-cards-grid / .terminal-ticker-bar)
+   ========================================================================== */
+
+.metric-cards-grid,
+.terminal-ticker-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.metric-card,
+.ticker-card {
+  background-color: var(--terminal-card);
+  border: 1px solid var(--terminal-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 62px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+.metric-card:hover,
+.ticker-card:hover {
+  border-color: var(--terminal-border-light);
+  background-color: var(--terminal-card-hover);
+}
+
+.stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plan-color-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.plan-key-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stat-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.stat-val.nav-value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.nav-number {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+
+.nav-unit {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.stat-val-dual {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.range-high {
+  color: var(--neon-green);
+}
+
+.range-low {
+  color: var(--neon-red);
+}
+
+.date-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: #58a6ff;
+}
+
+.stat-sub {
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Trend Colors */
+.trend-up,
+.stat-sub.trend-up {
+  color: var(--neon-green) !important;
+  font-weight: 600;
+}
+
+.trend-down,
+.stat-sub.trend-down {
+  color: var(--neon-red) !important;
+  font-weight: 600;
+}
+
+.trend-neutral,
+.stat-sub.trend-neutral {
+  color: var(--muted) !important;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.badge-success {
+  color: var(--neon-green);
+  background-color: var(--neon-green-bg);
+}
+
+.badge-danger {
+  color: var(--neon-red);
+  background-color: var(--neon-red-bg);
+}
+
+.badge-neutral {
+  color: var(--muted);
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.badge-info {
+  color: var(--accent);
+  background-color: rgba(56, 139, 253, 0.12);
+}
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metric-cards-empty {
+  background: var(--terminal-card);
+  border: 1px dashed var(--terminal-border);
+  border-radius: var(--radius-sm);
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* ==========================================================================
+   2. Watchlist Sidebar (.watchlist-sidebar-card)
+   ========================================================================== */
+
+.plan-selector,
+.watchlist-sidebar-card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--terminal-card);
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.watchlist-header {
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--terminal-border);
+  background: var(--terminal-card);
+  flex-shrink: 0;
+}
+
+.watchlist-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 3px;
+}
+
+.watchlist-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text);
+}
+
+.selected-count-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  border: 1px solid var(--terminal-border);
+}
+
+.watchlist-hint {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.watchlist-scroll-area,
+.plan-categories-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plan-category-group {
+  border: 1px solid var(--terminal-border);
+  border-radius: var(--radius-sm);
+  background-color: rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.plan-category-header {
+  padding: 6px 10px;
+  background-color: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  transition: background-color 0.15s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.plan-category-header:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.cat-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cat-chevron {
+  font-size: 8px;
+  color: var(--muted);
+  width: 10px;
+  display: inline-block;
+}
+
+.cat-title {
+  font-weight: 700;
+  font-size: 10.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.cat-count-badge {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.plan-pills-container {
+  padding: 4px;
+}
+
+.plan-pills-container.hidden {
+  display: none;
+}
+
+.plan-pills {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Plan Pill Row */
+.plan-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  border-radius: 4px;
+  background-color: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+  gap: 6px;
+  user-select: none;
+}
+
+.plan-pill:hover {
+  background-color: var(--terminal-card-hover);
+  border-color: var(--terminal-border-light);
+}
+
+.plan-pill.is-selected {
+  background-color: rgba(56, 139, 253, 0.06);
+  border-color: rgba(56, 139, 253, 0.25);
+}
+
+.plan-pill.is-primary {
+  background-color: rgba(56, 139, 253, 0.12);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.plan-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.plan-checkbox {
+  display: none;
+}
+
+.custom-check {
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  border: 1.5px solid var(--plan-color, var(--border));
+  display: inline-block;
+  transition: all 0.12s ease;
+}
+
+.plan-pill.is-selected .custom-check {
+  background-color: var(--plan-color);
+}
+
+.plan-pill:not(.is-selected) .custom-check {
+  background-color: transparent !important;
+}
+
+.plan-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+
+.plan-swatch {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.plan-name-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.plan-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-pill.is-primary .plan-name {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.primary-tag {
+  display: none;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--accent);
+  background-color: rgba(56, 139, 253, 0.18);
+  padding: 0 4px;
+  border-radius: 3px;
+  line-height: 1.3;
+}
+
+.plan-pill.is-primary .primary-tag {
+  display: inline-block;
+}
+
+.plan-price-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  margin-left: auto;
+  gap: 1px;
+}
+
+.plan-nav-val {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.plan-chg-pill {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.plan-chg-pill.up {
+  color: var(--neon-green);
+  background-color: var(--neon-green-bg);
+}
+
+.plan-chg-pill.down {
+  color: var(--neon-red);
+  background-color: var(--neon-red-bg);
+}
+
+.plan-chg-pill.neutral {
+  color: var(--muted);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.btn-only-this {
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: transparent;
+  border: 1px solid var(--terminal-border);
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+  font-family: var(--font);
+  flex-shrink: 0;
+}
+
+.plan-pill:hover .btn-only-this {
+  opacity: 0.85;
+}
+
+.btn-only-this:hover {
+  opacity: 1;
+  color: #ffffff;
+  border-color: var(--accent);
+  background-color: var(--accent);
+}
+
+/* Watchlist Footer */
+.watchlist-footer {
+  padding: 8px 10px;
+  border-top: 1px solid var(--terminal-border);
+  background: var(--terminal-card);
+  flex-shrink: 0;
+}
+
+.selector-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-quick-action {
+  flex: 1;
+  background-color: var(--terminal-card-hover);
+  color: var(--text);
+  border: 1px solid var(--terminal-border);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: var(--font);
+  text-align: center;
+}
+
+.btn-quick-action:hover {
+  background-color: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+}
+
+/* ==========================================================================
+   3. Animations & Mobile Responsiveness
+   ========================================================================== */
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .metric-cards-grid,
+  .terminal-ticker-bar {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 6px;
+  }
+
+  .stat-val {
+    font-size: 12px;
+  }
+
+  .nav-number {
+    font-size: 12.5px;
+  }
+}

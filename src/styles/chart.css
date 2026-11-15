@@ -1,0 +1,333 @@
+/**
+ * Interactive Multi-Series ApexCharts Styles - Trading Terminal Edition
+ * Provides responsive layout, mode toggle, range filter toolbar styling,
+ * and custom dark/light tooltip theme.
+ */
+
+.chart-wrapper,
+.trading-chart-card {
+  background: var(--terminal-card);
+  border: 1px solid var(--terminal-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  transition: var(--transition);
+  margin-bottom: 0;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.chart-title-area {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chart-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.chart-subtitle {
+  font-size: 10.5px;
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+.chart-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Mode Toggle: NAV จริง vs % เปลี่ยนแปลง */
+.chart-mode-group {
+  display: inline-flex;
+  border: 1px solid var(--terminal-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--terminal-bg);
+}
+
+.mode-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.mode-btn:hover:not(.is-active) {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mode-btn.is-active {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+/* Chart Action Button (Auto-Fit) */
+.chart-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--terminal-bg);
+  border: 1px solid var(--terminal-border);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 9px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.chart-action-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.chart-action-btn.is-active {
+  background: rgba(56, 139, 253, 0.15);
+  border-color: var(--accent);
+  color: #58a6ff;
+}
+
+/* Draggable Chart Resizer */
+.chart-resizer {
+  width: 100%;
+  height: 12px;
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+  user-select: none;
+}
+
+.chart-resizer:hover {
+  opacity: 1;
+}
+
+.resizer-handle {
+  width: 48px;
+  height: 4px;
+  background: var(--terminal-border);
+  border-radius: 2px;
+  transition: background 0.2s ease;
+}
+
+.chart-resizer:hover .resizer-handle {
+  background: var(--accent);
+}
+
+/* Timeframe Group */
+.timeframe-group {
+  display: inline-flex;
+  align-items: center;
+  background: var(--terminal-bg);
+  border: 1px solid var(--terminal-border);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  gap: 2px;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.timeframe-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.timeframe-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.timeframe-btn.is-active {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+/* Normalize Banner */
+.normalize-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  background: rgba(56, 139, 253, 0.08);
+  border: 1px solid rgba(56, 139, 253, 0.25);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: #58a6ff;
+  user-select: none;
+}
+
+.banner-icon {
+  font-size: 12px;
+}
+
+/* Responsive ApexCharts Render Area */
+.chart-render-area {
+  width: 100%;
+  position: relative;
+  flex: 1;
+  min-height: 480px;
+}
+
+/* Custom Rich ApexCharts Tooltip */
+.chart-custom-tooltip {
+  background: var(--terminal-card);
+  border: 1px solid var(--terminal-border-light);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  box-shadow: var(--shadow-md);
+  font-family: var(--font);
+  font-size: 11.5px;
+  color: var(--text);
+  min-width: 180px;
+  pointer-events: none;
+}
+
+.chart-tooltip-header {
+  font-weight: 700;
+  color: var(--muted);
+  border-bottom: 1px solid var(--terminal-border);
+  padding-bottom: 5px;
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+
+.chart-tooltip-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.chart-tooltip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 5px;
+  flex-shrink: 0;
+}
+
+.chart-tooltip-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  font-size: 11px;
+}
+
+.chart-tooltip-val {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  text-align: right;
+  font-size: 11.5px;
+}
+
+.chart-tooltip-val.up {
+  color: var(--neon-green);
+}
+
+.chart-tooltip-val.down {
+  color: var(--neon-red);
+}
+
+/* Dark / Light ApexCharts Global Overrides */
+.apexcharts-tooltip {
+  background: var(--terminal-card) !important;
+  border-color: var(--terminal-border) !important;
+  color: var(--text) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.apexcharts-xaxistooltip,
+.apexcharts-yaxistooltip {
+  background: var(--terminal-bg) !important;
+  border-color: var(--terminal-border) !important;
+  color: var(--text) !important;
+}
+
+/* Mobile responsive height (< 768px) */
+@media (max-width: 768px) {
+  .chart-wrapper {
+    padding: 10px;
+  }
+
+  .chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .chart-toolbar {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .timeframe-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .timeframe-btn {
+    padding: 3px 6px;
+    font-size: 10.5px;
+    flex: 1;
+    text-align: center;
+  }
+
+  .chart-render-area {
+    min-height: 360px;
+    height: 360px;
+  }
+}
