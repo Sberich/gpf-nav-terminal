@@ -54,10 +54,10 @@ export class ExportModal {
 
                 <div class="export-features">
                   <ul class="export-features-list">
-                    <li><span class="feature-icon">✨</span> <strong>มี 2 แผ่นงาน:</strong> แผ่นสรุปผลตอบแทน & สถิติ + แผ่นข้อมูลประวัติย้อนหลัง</li>
-                    <li><span class="feature-icon">📌</span> <strong>ตรึงหัวตาราง:</strong> ตรึงหัวตารางและคอลัมน์วันที่เพื่อความสะดวกเวลาเลื่อนดู</li>
-                    <li><span class="feature-icon">🔢</span> <strong>ฟอร์แมตตัวเลข:</strong> ตัวเลขทศนิยม 4 ตำแหน่งชัดเจนตามมาตรฐาน กบข.</li>
-                    <li><span class="feature-icon">📅</span> <strong>เรียงลำดับเวลา:</strong> เรียงวันล่าสุดอยู่บนสุด สะดวกต่อการติดตาม</li>
+                    <li><span class="feature-icon">✨</span><div class="feature-text"><strong>2 แผ่นงาน:</strong> สรุปผลตอบแทน & สถิติ + ประวัติย้อนหลัง</div></li>
+                    <li><span class="feature-icon">📌</span><div class="feature-text"><strong>ตรึงหัวตาราง:</strong> ตรึงหัวตารางและคอลัมน์วันที่ เลื่อนดูได้สะดวก</div></li>
+                    <li><span class="feature-icon">🔢</span><div class="feature-text"><strong>4 ตำแหน่ง:</strong> ตัวเลขทศนิยม 4 ตำแหน่ง ชัดเจนตามมาตรฐาน กบข.</div></li>
+                    <li><span class="feature-icon">📅</span><div class="feature-text"><strong>เรียงจากล่าสุด:</strong> วันทำการล่าสุดอยู่บนสุด สะดวกต่อการติดตาม</div></li>
                   </ul>
                 </div>
 
@@ -87,10 +87,10 @@ export class ExportModal {
 
                 <div class="export-features">
                   <ul class="export-features-list">
-                    <li><span class="feature-icon">🇹🇭</span> <strong>UTF-8 with BOM:</strong> เปิดใน Excel ภาษาไทยไม่เพี้ยน ไม่ต้องแปลง encoding</li>
-                    <li><span class="feature-icon">📊</span> <strong>ตาราง 15 แผนครบถ้วน:</strong> รวมประวัติ NAV ทุกแผนการลงทุนตั้งแต่เริ่มต้น</li>
-                    <li><span class="feature-icon">📅</span> <strong>เรียงลำดับเวลา:</strong> เรียงวันล่าสุดอยู่บนสุด สะดวกต่อการนำเข้าฐานข้อมูล</li>
-                    <li><span class="feature-icon">💻</span> <strong>รองรับ Data Tools:</strong> นำเข้า Python, R, Power BI, หรือ Tableau ได้ทันที</li>
+                    <li><span class="feature-icon">🇹🇭</span><div class="feature-text"><strong>UTF-8 with BOM:</strong> เปิดใน Excel ภาษาไทยไม่เพี้ยน ไม่ต้องแปลง</div></li>
+                    <li><span class="feature-icon">📊</span><div class="feature-text"><strong>15 แผนครบถ้วน:</strong> รวมประวัติ NAV ทุกกองทุนตั้งแต่เริ่มต้น</div></li>
+                    <li><span class="feature-icon">📅</span><div class="feature-text"><strong>เรียงจากล่าสุด:</strong> วันทำการล่าสุดอยู่บนสุด นำเข้าฐานข้อมูลสะดวก</div></li>
+                    <li><span class="feature-icon">💻</span><div class="feature-text"><strong>Data Tools:</strong> รองรับ Python, R, Power BI และ Tableau ทันที</div></li>
                   </ul>
                 </div>
 
@@ -109,7 +109,7 @@ export class ExportModal {
 
             <div class="export-note">
               <span class="export-note-icon">💡</span>
-              <p>ข้อมูลอัปเดตอัตโนมัติทุกวันทำการหลัง กบข. ประกาศมูลค่าหน่วยลงทุน (NAV) เวลาประมาณ 20:30 น.</p>
+              <p>ข้อมูลอัปเดตอัตโนมัติทุกวันทำการ หลัง กบข. ประกาศมูลค่าหน่วยลงทุน (NAV) ช่วงเวลาประมาณ 10:00 - 11:00 น.</p>
             </div>
           </div>
         </div>

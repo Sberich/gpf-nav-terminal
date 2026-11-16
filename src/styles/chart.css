@@ -204,12 +204,175 @@
   font-size: 12px;
 }
 
+/* MACD Tactical Signal Banner & Sub-Chart Oscillator */
+.macd-signal-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(31, 41, 61, 0.45);
+  border: 1px solid var(--terminal-border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  font-size: 11.5px;
+  color: var(--text);
+  transition: var(--transition);
+  min-height: 32px;
+}
+
+.macd-signal-banner:empty {
+  display: none;
+}
+
+.signal-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.signal-tag.tag-buy {
+  background: rgba(16, 185, 129, 0.18);
+  color: var(--neon-green);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.signal-tag.tag-sell {
+  background: rgba(239, 68, 68, 0.18);
+  color: var(--neon-red);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.signal-tag.tag-low-vol {
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--muted);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.signal-tag.tag-neutral {
+  background: rgba(245, 158, 11, 0.18);
+  color: var(--warning);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.signal-desc {
+  flex: 1;
+  color: var(--text);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signal-meta {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.signal-legend-hint {
+  color: var(--muted);
+  font-size: 10.5px;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+/* Tooltip Cross Signal Badge */
+.tooltip-cross-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.tooltip-cross-tag.golden {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--neon-green);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.tooltip-cross-tag.dead {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--neon-red);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+/* Clean glowing point annotations on the chart line */
+.apexcharts-point-annotations circle {
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.6));
+  transition: transform 0.15s ease;
+}
+
+.apexcharts-point-annotations circle:hover {
+  transform: scale(1.3);
+}
+
+.macd-subchart-area {
+  margin-top: 6px;
+  border-top: 1px dashed var(--terminal-border);
+  padding-top: 6px;
+  min-height: 160px;
+  height: 160px;
+  transition: all 0.25s ease-in-out;
+}
+
+.subchart-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 /* Responsive ApexCharts Render Area */
 .chart-render-area {
   width: 100%;
   position: relative;
   flex: 1;
   min-height: 480px;
+}
+
+/* TradingView Lightweight Charts Engine */
+.tv-chart-area {
+  width: 100%;
+  position: relative;
+  flex: 1;
+  min-height: 480px;
+}
+
+#btn-toggle-engine {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  transition: all 0.2s ease;
+}
+
+#btn-toggle-engine.is-active {
+  background: rgba(41, 98, 255, 0.18);
+  color: #2962ff;
+  border-color: #2962ff;
+  box-shadow: 0 0 10px rgba(41, 98, 255, 0.25);
+}
+
+[data-theme="dark"] #btn-toggle-engine.is-active {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border-color: #3b82f6;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+.tv-wrapper {
+  user-select: none;
 }
 
 /* Custom Rich ApexCharts Tooltip */
@@ -299,6 +462,10 @@
 
 /* Mobile responsive height (< 768px) */
 @media (max-width: 768px) {
+  .chart-subtitle {
+    display: none !important;
+  }
+
   .chart-wrapper {
     padding: 10px;
   }
@@ -330,4 +497,8 @@
     min-height: 360px;
     height: 360px;
   }
+}
+
+.mobile-view .chart-subtitle {
+  display: none !important;
 }

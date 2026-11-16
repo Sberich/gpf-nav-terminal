@@ -115,16 +115,29 @@ export function renderHeader(container) {
 
   container.insertAdjacentHTML('afterbegin', headerHtml);
 
-  // Setup Logo Badge: Single click opens Developer Credit modal; Triple click opens secret export modal
+  // Setup Logo Badge: Single click opens Developer Credit modal; 7 clicks opens secret export modal
   let logoClickCount = 0;
   let logoClickTimer = null;
   const logoBadge = container.querySelector ? container.querySelector('.logo-badge') : document.querySelector('.logo-badge');
   if (logoBadge) {
     logoBadge.style.cursor = 'pointer';
-    logoBadge.title = 'ข้อมูลผู้พัฒนา (คลิก) / ประตูทางลับดาวน์โหลด (คลิก 3 ครั้ง)';
+    logoBadge.title = 'กองทุนบำเหน็จบำนาญข้าราชการ (กบข.)';
     logoBadge.addEventListener('click', () => {
       logoClickCount++;
       clearTimeout(logoClickTimer);
+
+      if (logoClickCount >= 7) {
+        logoClickCount = 0;
+        const exportBtn = document.getElementById('btn-export-modal');
+        if (exportBtn) {
+          exportBtn.click();
+        } else {
+          const exportEvent = new CustomEvent('open-export-modal', { bubbles: true });
+          document.dispatchEvent(exportEvent);
+        }
+        return;
+      }
+
       logoClickTimer = setTimeout(() => {
         if (logoClickCount === 1) {
           const devEvent = new CustomEvent('open-dev-modal', { bubbles: true });
@@ -134,18 +147,7 @@ export function renderHeader(container) {
           }
         }
         logoClickCount = 0;
-      }, 350);
-
-      if (logoClickCount >= 3) {
-        logoClickCount = 0;
-        const exportBtn = document.getElementById('btn-export-modal');
-        if (exportBtn) {
-          exportBtn.click();
-        } else {
-          const exportEvent = new CustomEvent('open-export-modal', { bubbles: true });
-          document.dispatchEvent(exportEvent);
-        }
-      }
+      }, 400);
     });
   }
 
@@ -153,7 +155,7 @@ export function renderHeader(container) {
   const logoTitle = container.querySelector ? container.querySelector('.logo-title') : document.querySelector('.logo-title');
   if (logoTitle) {
     logoTitle.style.cursor = 'pointer';
-    logoTitle.title = 'ข้อมูลผู้พัฒนา';
+    logoTitle.title = 'GPF NAV Terminal';
     logoTitle.addEventListener('click', () => {
       const devEvent = new CustomEvent('open-dev-modal', { bubbles: true });
       document.dispatchEvent(devEvent);

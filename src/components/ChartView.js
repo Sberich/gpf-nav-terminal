@@ -7,6 +7,7 @@
 
 import navService, { fetchChartData, fetchFullHistory, fetchSummary } from '../services/navService.js';
 import pinService from '../services/pinService.js';
+import { TradingViewChart } from './TradingViewChart.js';
 
 /**
  * Toast Notification Utility
@@ -261,6 +262,255 @@ export function sliceSeriesData({
   return rawResult;
 }
 
+/**
+ * Exponential Moving Average (EMA) Calculation
+ */
+export function calcEMA(data, period) {
+  if (!data || data.length === 0) return [];
+  const k = 2 / (period + 1);
+  const ema = [data[0]];
+  for (let i = 1; i < data.length; i++) {
+    ema.push(data[i] * k + ema[i - 1] * (1 - k));
+  }
+  return ema;
+}
+
+/**
+ * Relative Strength Index (RSI) Calculation using Wilder's Smoothing
+ */
+export function calcRSI(values, period = 14) {
+  if (!values || values.length <= period) return 50;
+  let gains = 0, losses = 0;
+  for (let i = 1; i <= period; i++) {
+    const change = values[i] - values[i - 1];
+    if (change > 0) gains += change;
+    else losses -= change;
+  }
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+  for (let i = period + 1; i < values.length; i++) {
+    const change = values[i] - values[i - 1];
+    const gain = change > 0 ? change : 0;
+    const loss = change < 0 ? -change : 0;
+    avgGain = ((avgGain * (period - 1)) + gain) / period;
+    avgLoss = ((avgLoss * (period - 1)) + loss) / period;
+  }
+  if (avgLoss === 0) return avgGain > 0 ? 100 : 50;
+  const rs = avgGain / avgLoss;
+  return 100 - (100 / (1 + rs));
+}
+
+/**
+ * Technical Analysis Engine for a GPF plan
+ * Computes Volatility, EMA(12), EMA(26), MACD Line, Signal(9), Histogram, RSI(14), and Golden/Dead Crosses
+ */
+export function analyzePlanTechnical(chartData, planName) {
+  if (!chartData || !chartData.series || !chartData.dates || !planName) return null;
+  const s = chartData.series.find(x => x.name === planName || x.name?.includes(planName));
+  if (!s || !s.data) return null;
+
+  const dates = [];
+  const values = [];
+  for (let i = 0; i < s.data.length; i++) {
+    const v = s.data[i];
+    if (v !== null && v !== undefined && v > 0) {
+      dates.push(chartData.dates[i]);
+      values.push(v);
+    }
+  }
+
+  if (values.length < 35) {
+    return {
+      planName,
+      dates,
+      values,
+      volatility: 0,
+      isLowVol: false,
+      isUnreliable: true,
+      crosses: [],
+      currentHist: 0,
+      latestCross: null,
+      rsi: 50
+    };
+  }
+
+  // Calculate annualized volatility to guard against noise in low-risk bond/money market funds
+  const returns = [];
+  for (let i = 1; i < values.length; i++) {
+    returns.push((values[i] - values[i - 1]) / values[i - 1]);
+  }
+  const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+  const variance = returns.reduce((a, r) => a + (r - mean) ** 2, 0) / (returns.length - 1);
+  const volatility = Math.sqrt(variance) * Math.sqrt(252);
+  const isLowVol = volatility < 0.02; // Under 2% volatility: e.g. money market & short debt
+
+  const ema12 = calcEMA(values, 12);
+  const ema26 = calcEMA(values, 26);
+  const macd = values.map((_, i) => ema12[i] - ema26[i]);
+  const signal = calcEMA(macd, 9);
+  const hist = macd.map((v, i) => v - signal[i]);
+  const rsi = calcRSI(values, 14);
+
+  // Identify Golden Cross (Hist: <=0 -> >0) and Dead Cross (Hist: >=0 -> <0)
+  const crosses = [];
+  for (let i = 1; i < hist.length; i++) {
+    if (hist[i - 1] <= 0 && hist[i] > 0) {
+      crosses.push({ type: 'golden', date: dates[i], price: values[i], index: i });
+    } else if (hist[i - 1] >= 0 && hist[i] < 0) {
+      crosses.push({ type: 'dead', date: dates[i], price: values[i], index: i });
+    }
+  }
+
+  const lastIdx = values.length - 1;
+  return {
+    planName,
+    dates,
+    values,
+    volatility,
+    isLowVol,
+    isUnreliable: false,
+    ema12,
+    ema26,
+    macd,
+    signal,
+    hist,
+    rsi,
+    crosses,
+    currentHist: hist[lastIdx],
+    latestCross: crosses.length > 0 ? crosses[crosses.length - 1] : null
+  };
+}
+
+/**
+ * Build ApexCharts options for MACD Sub-Chart Oscillator
+ */
+export function buildMacdSubChartOptions({
+  dates = [],
+  macdLine = [],
+  signalLine = [],
+  hist = [],
+  themeMode = 'dark',
+  planName = ''
+}) {
+  const isDark = themeMode === 'dark';
+  const textColor = isDark ? '#8b949e' : '#57606a';
+  const borderColor = isDark ? '#1f293d' : '#d0d7de';
+
+  const macdData = [];
+  const signalData = [];
+  const histData = [];
+
+  for (let i = 0; i < dates.length; i++) {
+    const ts = parseDateUTC(dates[i]).getTime();
+    macdData.push([ts, Number(macdLine[i]?.toFixed(4) || 0)]);
+    signalData.push([ts, Number(signalLine[i]?.toFixed(4) || 0)]);
+    histData.push([ts, Number(hist[i]?.toFixed(4) || 0)]);
+  }
+
+  return {
+    chart: {
+      id: 'gpf-macd-subchart',
+      group: 'gpf-charts',
+      type: 'line',
+      height: 160,
+      animations: { enabled: false },
+      toolbar: { show: false },
+      fontFamily: 'Sarabun, sans-serif',
+      background: 'transparent'
+    },
+    series: [
+      {
+        name: 'Histogram',
+        type: 'column',
+        data: histData
+      },
+      {
+        name: 'MACD (12,26)',
+        type: 'line',
+        data: macdData
+      },
+      {
+        name: 'Signal (9)',
+        type: 'line',
+        data: signalData
+      }
+    ],
+    plotOptions: {
+      bar: {
+        columnWidth: '60%',
+        colors: {
+          ranges: [
+            {
+              from: -999999,
+              to: -0.000001,
+              color: '#EF4444'
+            },
+            {
+              from: 0,
+              to: 999999,
+              color: '#10B981'
+            }
+          ]
+        }
+      }
+    },
+    colors: ['#10B981', '#3B82F6', '#F59E0B'],
+    stroke: {
+      width: [0, 2, 2],
+      curve: 'smooth'
+    },
+    xaxis: {
+      type: 'datetime',
+      labels: {
+        show: false
+      },
+      axisBorder: { show: false },
+      axisTicks: { show: false }
+    },
+    yaxis: {
+      labels: {
+        formatter: (val) => (val != null ? val.toFixed(3) : ''),
+        style: {
+          colors: textColor,
+          fontSize: '10px'
+        }
+      }
+    },
+    grid: {
+      borderColor: borderColor,
+      strokeDashArray: 3
+    },
+    annotations: {
+      yaxis: [
+        {
+          y: 0,
+          borderColor: isDark ? '#4b5563' : '#9ca3af',
+          strokeDashArray: 2,
+          opacity: 0.6
+        }
+      ]
+    },
+    legend: {
+      show: true,
+      position: 'top',
+      horizontalAlign: 'right',
+      labels: {
+        colors: textColor
+      },
+      fontSize: '11px',
+      markers: { width: 8, height: 8 }
+    },
+    tooltip: {
+      theme: isDark ? 'dark' : 'light',
+      shared: true,
+      intersect: false,
+      y: {
+        formatter: (val) => (val != null ? val.toFixed(4) : '-')
+      }
+    }
+  };
+}
+
 let _ApexChartsClass = null;
 
 /**
@@ -293,7 +543,8 @@ export function buildApexOptions({
   colors = [],
   themeMode = 'dark',
   annotations = null,
-  mode = 'nav'
+  mode = 'nav',
+  crossLookup = null
 }) {
   const isDark = themeMode === 'dark';
   const textColor = isDark ? '#8b949e' : '#57606a';
@@ -301,8 +552,9 @@ export function buildApexOptions({
   const isPct = mode === 'pct';
 
   // Merge custom annotations with zero-line in pct mode
-  const mergedAnnotations = annotations ? { ...annotations } : { yaxis: [] };
+  const mergedAnnotations = annotations ? { ...annotations } : { yaxis: [], points: [] };
   if (!mergedAnnotations.yaxis) mergedAnnotations.yaxis = [];
+  if (!mergedAnnotations.points) mergedAnnotations.points = [];
   if (isPct) {
     const hasZero = mergedAnnotations.yaxis.some(a => a.y === 0);
     if (!hasZero) {
@@ -326,6 +578,8 @@ export function buildApexOptions({
 
   return {
     chart: {
+      id: 'gpf-main-chart',
+      group: 'gpf-charts',
       type: 'line',
       height: 450,
       animations: {
@@ -414,6 +668,18 @@ export function buildApexOptions({
           }
         }
 
+        let crossBadge = '';
+        if (ts && crossLookup) {
+          const d = new Date(ts);
+          const iso = formatISODate(d);
+          const cType = crossLookup[iso];
+          if (cType === 'golden') {
+            crossBadge = ` <span class="tooltip-cross-tag golden">🟢 ซื้อ (Golden Cross)</span>`;
+          } else if (cType === 'dead') {
+            crossBadge = ` <span class="tooltip-cross-tag dead">🔴 ขาย (Dead Cross)</span>`;
+          }
+        }
+
         let rowsHtml = '';
         const names = w.globals.seriesNames || [];
         const clrs = w.globals.colors || [];
@@ -441,7 +707,7 @@ export function buildApexOptions({
 
         return `
           <div class="chart-custom-tooltip">
-            <div class="chart-tooltip-header">${dateHeader}</div>
+            <div class="chart-tooltip-header">${dateHeader}${crossBadge}</div>
             <div class="chart-tooltip-body">${rowsHtml}</div>
           </div>
         `;
@@ -492,6 +758,9 @@ export class ChartView {
     this.isAutoFit = (typeof localStorage !== 'undefined' && localStorage.getItem('gpf_chart_autofit') === 'true');
     this.chartHeight = 450;
     this.chart = null;
+    this.showSignalOverlay = (typeof localStorage !== 'undefined' ? localStorage.getItem('gpf_show_signals') !== 'false' : true);
+    this.chartEngine = (typeof localStorage !== 'undefined' ? localStorage.getItem('gpf_chart_engine') || 'apex' : 'apex');
+    this.tvChart = null;
     this.ApexCharts = options.ApexCharts || null;
     this._handleClick = this._handleClick.bind(this);
     this._handlePinsChanged = this._handlePinsChanged.bind(this);
@@ -501,6 +770,12 @@ export class ChartView {
   setPrimaryPlan(planName) {
     if (planName) {
       this.primaryPlan = planName;
+      this.updateMacdSignalBanner();
+      if (this.chartEngine === 'tradingview') {
+        this.renderTradingViewChart();
+      } else {
+        this.updateAnnotations();
+      }
     }
   }
 
@@ -526,6 +801,10 @@ export class ChartView {
 
     this.renderSkeleton();
     await this.mountChart();
+    if (this.chartEngine === 'tradingview') {
+      this.renderTradingViewChart();
+    }
+    this.updateMacdSignalBanner();
   }
 
   /**
@@ -544,7 +823,7 @@ export class ChartView {
         <div class="chart-header">
           <div class="chart-title-area">
             <h3 class="chart-title">เปรียบเทียบมูลค่าหน่วยลงทุน (NAV)</h3>
-            <span class="chart-subtitle">แสดงข้อมูลย้อนหลังตามช่วงเวลาและเปรียบเทียบผลตอบแทน · ดับเบิลคลิกบนกราฟเพื่อปักหมุด</span>
+            <span class="chart-subtitle">แสดงข้อมูลย้อนหลังตามช่วงเวลาและเปรียบเทียบผลตอบแทน</span>
           </div>
           <div class="chart-toolbar">
             <!-- Mode Toggle: NAV จริง vs % เปลี่ยนแปลง -->
@@ -558,6 +837,16 @@ export class ChartView {
               ${btnsHtml}
             </div>
 
+            <!-- Signal Overlay Toggle Button -->
+            <button class="chart-action-btn ${this.showSignalOverlay ? 'is-active' : ''}" id="btn-toggle-signals" title="เปิด/ปิด จุดสัญญาณซื้อขาย (Overlay) บนเส้นกราฟ">
+              <span>🟢 สัญญาณซื้อ/ขาย</span>
+            </button>
+
+            <!-- TradingView Toggle Button -->
+            <button class="chart-action-btn ${this.chartEngine === 'tradingview' ? 'is-active' : ''}" id="btn-toggle-engine" title="สลับการแสดงผลระหว่างกราฟ ApexCharts และ TradingView">
+              <span>TradingView</span>
+            </button>
+
             <!-- Chart Auto-Fit Height Toggle -->
             <button class="chart-action-btn ${this.isAutoFit ? 'is-active' : ''}" id="btn-chart-autofit" title="ขยายกราฟให้พอดีความสูงหน้าจอ (Auto-Fit) หรือคืนค่าขนาดเดิม">
               <span>${this.isAutoFit ? '↕ ขนาดมาตรฐาน' : '⛶ พอดีหน้าจอ'}</span>
@@ -565,12 +854,15 @@ export class ChartView {
           </div>
         </div>
 
+        <div class="macd-signal-banner" id="macd-signal-banner" style="display: ${this.showSignalOverlay ? 'flex' : 'none'};"></div>
+
         <div class="normalize-banner" id="normalize-banner" style="display: ${this.currentMode === 'pct' ? 'flex' : 'none'};">
           <span class="banner-icon">📊</span>
           <span class="banner-text">โหมด % เปลี่ยนแปลง — ทุกแผนเริ่มต้นที่ 0% จากวันแรกในช่วงที่เลือก เพื่อเปรียบเทียบผลตอบแทนได้อย่างเท่าเทียม</span>
         </div>
 
-        <div class="chart-render-area" id="apexcharts-area"></div>
+        <div class="chart-render-area" id="apexcharts-area" style="display: ${this.chartEngine === 'apex' ? 'block' : 'none'};"></div>
+        <div class="chart-render-area tv-chart-area" id="tradingview-area" style="display: ${this.chartEngine === 'tradingview' ? 'block' : 'none'};"></div>
 
         <!-- Draggable Resizer Bar -->
         <div class="chart-resizer" id="chart-resizer" title="คลิกลากขึ้นลงเพื่อปรับความสูงกราฟ">
@@ -600,12 +892,36 @@ export class ChartView {
     if (fitBtn) {
       fitBtn.addEventListener('click', this._handleClick);
     }
+
+    const signalBtn = this.container.querySelector
+      ? this.container.querySelector('#btn-toggle-signals')
+      : null;
+    if (signalBtn) {
+      signalBtn.addEventListener('click', this._handleClick);
+    }
+
+    const engineBtn = this.container.querySelector
+      ? this.container.querySelector('#btn-toggle-engine')
+      : null;
+    if (engineBtn) {
+      engineBtn.addEventListener('click', this._handleClick);
+    }
   }
 
   _handleClick(e) {
     const target = e.target || e;
-    const btn = target.closest ? target.closest('.timeframe-btn, .mode-btn, #btn-chart-autofit') : target;
+    const btn = target.closest ? target.closest('.timeframe-btn, .mode-btn, #btn-chart-autofit, #btn-toggle-signals, #btn-toggle-engine') : target;
     if (!btn) return;
+
+    if (btn.id === 'btn-toggle-signals' || (btn.closest && btn.closest('#btn-toggle-signals'))) {
+      this.toggleSignalOverlay();
+      return;
+    }
+
+    if (btn.id === 'btn-toggle-engine' || (btn.closest && btn.closest('#btn-toggle-engine'))) {
+      this.toggleChartEngine();
+      return;
+    }
 
     if (btn.id === 'btn-chart-autofit' || (btn.closest && btn.closest('#btn-chart-autofit'))) {
       this.toggleAutoFit();
@@ -662,29 +978,39 @@ export class ChartView {
    */
   getAnnotations() {
     const yaxis = [];
+    const points = [];
     // Only show absolute price pins when in 'nav' mode
     if (this.currentMode === 'nav') {
+      const isMobile = (typeof window !== 'undefined' && (
+        window.innerWidth <= 768 ||
+        document.documentElement?.classList?.contains('mobile-view') ||
+        document.body?.classList?.contains('mobile-view')
+      ));
       const activeList = Array.from(this.activePlans);
       for (const planName of activeList) {
         const pins = pinService.getPinsForPlan(planName);
         const color = getPlanColor(planName, this.summaryData);
         for (const pin of pins) {
           const noteStr = pin.note ? ` (${pin.note})` : '';
+          const labelText = isMobile
+            ? `${pin.value.toFixed(4)}`
+            : `📌 ${planName} ${pin.value.toFixed(4)}${noteStr}`;
+
           yaxis.push({
             y: pin.value,
             borderColor: color,
             strokeDashArray: 4,
             label: {
-              text: `📌 ${planName} ${pin.value.toFixed(4)}${noteStr}`,
+              text: labelText,
               borderColor: color,
               position: 'left',
               textAnchor: 'start',
-              offsetX: 8,
+              offsetX: isMobile ? 4 : 8,
               offsetY: 0,
               style: {
                 color: '#ffffff',
                 background: color,
-                fontSize: '11px',
+                fontSize: isMobile ? '9.5px' : '11px',
                 fontWeight: 600,
                 fontFamily: 'Sarabun, sans-serif'
               }
@@ -692,8 +1018,52 @@ export class ChartView {
           });
         }
       }
+
+      // MACD Tactical Cross Points for Primary Plan (Overlay Dots)
+      if (this.showSignalOverlay && ['1M', '3M', '6M', 'YTD', '1Y'].includes(this.currentTimeframe) && this.chartData) {
+        const targetPlan = this.primaryPlan || (activeList.length > 0 ? activeList[0] : null);
+        if (targetPlan) {
+          const analysis = analyzePlanTechnical(this.chartData, targetPlan);
+          if (analysis && !analysis.isLowVol && !analysis.isUnreliable && analysis.crosses.length > 0) {
+            let refDate = this.options.referenceDate ? parseDateUTC(this.options.referenceDate) : null;
+            if (!refDate || isNaN(refDate.getTime())) {
+              if (this.chartData.dates && this.chartData.dates.length > 0) {
+                refDate = parseDateUTC(this.chartData.dates[this.chartData.dates.length - 1]);
+              } else {
+                refDate = new Date();
+              }
+            }
+            const cutoff = calculateCutoffDate(this.currentTimeframe, refDate);
+            const cutoffTime = cutoff ? cutoff.getTime() : 0;
+
+            const visibleCrosses = analysis.crosses.filter(c => {
+              const t = parseDateUTC(c.date).getTime();
+              return t >= cutoffTime;
+            });
+
+            // Show visible crosses as clean, un-obstructive signal dots on the line (no text boxes blocking the curve)
+            const recentCrosses = visibleCrosses.slice(-8);
+            for (const cross of recentCrosses) {
+              const isGolden = cross.type === 'golden';
+              const color = isGolden ? '#10B981' : '#EF4444';
+              points.push({
+                x: parseDateUTC(cross.date).getTime(),
+                y: cross.price,
+                marker: {
+                  size: 6,
+                  fillColor: color,
+                  strokeColor: '#ffffff',
+                  strokeWidth: 2,
+                  shape: 'circle',
+                  radius: 3
+                }
+              });
+            }
+          }
+        }
+      }
     }
-    return { yaxis };
+    return { yaxis, points };
   }
 
   /**
@@ -730,7 +1100,8 @@ export class ChartView {
       colors: sliced.colors,
       themeMode: this.currentTheme,
       annotations: this.getAnnotations(),
-      mode: this.currentMode
+      mode: this.currentMode,
+      crossLookup: this.getCrossLookup()
     });
 
     if (this.isAutoFit) {
@@ -752,6 +1123,13 @@ export class ChartView {
 
     if (typeof document !== 'undefined') {
       document.addEventListener('pins-changed', this._handlePinsChanged);
+    }
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      window.addEventListener('resize', () => {
+        if (this.chart && typeof this.chart.updateOptions === 'function') {
+          this.chart.updateOptions({ annotations: this.getAnnotations() }, false, false);
+        }
+      });
     }
   }
 
@@ -884,7 +1262,11 @@ export class ChartView {
   }
 
   _handlePinsChanged() {
-    this.updateAnnotations();
+    if (this.chartEngine === 'tradingview') {
+      this.renderTradingViewChart();
+    } else {
+      this.updateAnnotations();
+    }
   }
 
   updateAnnotations() {
@@ -935,10 +1317,29 @@ export class ChartView {
     this.updateChartData();
   }
 
+  getCrossLookup() {
+    if (!this.showSignalOverlay || !this.chartData) return null;
+    const targetPlan = this.primaryPlan || (this.activePlans && this.activePlans.size > 0 ? Array.from(this.activePlans)[0] : null);
+    if (!targetPlan) return null;
+    const analysis = analyzePlanTechnical(this.chartData, targetPlan);
+    if (!analysis || analysis.isLowVol || analysis.isUnreliable || !analysis.crosses) return null;
+    const lookup = {};
+    for (const cross of analysis.crosses) {
+      lookup[cross.date] = cross.type;
+    }
+    return lookup;
+  }
+
   /**
    * Re-slice data and update ApexCharts series & colors
    */
   updateChartData(fullOptionsUpdate = false) {
+    if (this.chartEngine === 'tradingview') {
+      this.renderTradingViewChart();
+      this.updateMacdSignalBanner();
+      return;
+    }
+
     if (!this.chart) return;
 
     const sliced = sliceSeriesData({
@@ -957,7 +1358,8 @@ export class ChartView {
         colors: sliced.colors,
         themeMode: this.currentTheme,
         annotations: this.getAnnotations(),
-        mode: this.currentMode
+        mode: this.currentMode,
+        crossLookup: this.getCrossLookup()
       });
       this.chart.updateOptions(fullOptions, true, true);
     } else {
@@ -971,6 +1373,8 @@ export class ChartView {
         this.chart.updateSeries(sliced.series, true);
       }
     }
+
+    this.updateMacdSignalBanner();
   }
 
   /**
@@ -979,6 +1383,10 @@ export class ChartView {
   setTheme(themeMode) {
     if (!themeMode || this.currentTheme === themeMode) return;
     this.currentTheme = themeMode;
+
+    if (this.tvChart) {
+      this.tvChart.setTheme(themeMode);
+    }
 
     if (!this.chart || typeof this.chart.updateOptions !== 'function') return;
 
@@ -1019,10 +1427,180 @@ export class ChartView {
     }, false, true);
   }
 
+  updateMacdSignalBanner() {
+    const bannerEl = this.container ? this.container.querySelector('#macd-signal-banner') : null;
+    if (!bannerEl) return;
+
+    if (!this.showSignalOverlay) {
+      bannerEl.style.display = 'none';
+      return;
+    }
+    bannerEl.style.display = 'flex';
+
+    if (!this.chartData) {
+      bannerEl.innerHTML = '';
+      return;
+    }
+
+    const targetPlan = this.primaryPlan || (this.activePlans && this.activePlans.size > 0 ? Array.from(this.activePlans)[0] : 'แผนเชิงรุก 35');
+    const analysis = analyzePlanTechnical(this.chartData, targetPlan);
+    if (!analysis) {
+      bannerEl.innerHTML = '';
+      return;
+    }
+
+    if (analysis.isLowVol) {
+      bannerEl.innerHTML = `
+        <div class="signal-tag tag-low-vol">🛡️ ความผันผวนต่ำ</div>
+        <span class="signal-desc"><strong>${targetPlan}:</strong> แผนความเสี่ยงต่ำมาก การเติบโตสะสมคงที่ (RSI/MACD ไม่เหมาะสมกับแผนนี้)</span>
+        <span class="signal-meta">Vol: ${(analysis.volatility * 100).toFixed(2)}%</span>
+      `;
+      return;
+    }
+
+    if (analysis.isUnreliable) {
+      bannerEl.innerHTML = `
+        <div class="signal-tag tag-neutral">⏳ ประวัติน้อย</div>
+        <span class="signal-desc"><strong>${targetPlan}:</strong> ต้องการข้อมูลอย่างน้อย 60 วันทำการเพื่อวิเคราะห์โมเมนตัม</span>
+      `;
+      return;
+    }
+
+    const isBullish = analysis.currentHist > 0;
+    const lastCross = analysis.latestCross;
+    let crossDetail = '';
+    if (lastCross) {
+      const isGolden = lastCross.type === 'golden';
+      crossDetail = `· <span style="opacity: 0.85">จุดตัดล่าสุด: ${isGolden ? 'Golden Cross' : 'Dead Cross'} (${lastCross.date})</span>`;
+    }
+
+    bannerEl.innerHTML = `
+      <div class="signal-tag ${isBullish ? 'tag-buy' : 'tag-sell'}">
+        ${isBullish ? '🟢 สัญญาณซื้อ / ขาขึ้น' : '🔴 สัญญาณขาย / ขาลง'}
+      </div>
+      <span class="signal-desc">
+        <strong>${targetPlan}:</strong> ${isBullish ? 'โมเมนตัมกำลังเป็นบวก (MACD เหนือ Signal)' : 'โมเมนตัมชะลอตัว/พักฐาน (MACD ต่ำกว่า Signal)'}
+        ${crossDetail}
+        <span class="signal-legend-hint">· จุดกราฟ: <strong style="color:#10B981">● ซื้อ</strong> / <strong style="color:#EF4444">● ขาย</strong></span>
+      </span>
+      <span class="signal-meta">
+        Hist: <strong>${analysis.currentHist >= 0 ? '+' : ''}${analysis.currentHist.toFixed(4)}</strong> · RSI: <strong>${analysis.rsi.toFixed(1)}</strong>
+      </span>
+    `;
+  }
+
+  toggleSignalOverlay() {
+    this.showSignalOverlay = !this.showSignalOverlay;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('gpf_show_signals', String(this.showSignalOverlay));
+    }
+    const btn = this.container ? this.container.querySelector('#btn-toggle-signals') : null;
+    if (btn) {
+      if (this.showSignalOverlay) {
+        btn.classList.add('is-active');
+      } else {
+        btn.classList.remove('is-active');
+      }
+    }
+    this.updateMacdSignalBanner();
+    if (this.chartEngine === 'tradingview') {
+      this.renderTradingViewChart();
+    } else {
+      this.updateAnnotations();
+    }
+    if (this.showSignalOverlay) {
+      showToast('🟢 แสดงจุดสัญญาณซื้อ/ขาย (Overlay) บนกราฟ');
+    } else {
+      showToast('⚪ ซ่อนจุดสัญญาณบนกราฟ');
+    }
+  }
+
+  toggleChartEngine() {
+    this.chartEngine = this.chartEngine === 'tradingview' ? 'apex' : 'tradingview';
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('gpf_chart_engine', this.chartEngine);
+    }
+    const btn = this.container ? this.container.querySelector('#btn-toggle-engine') : null;
+    if (btn) {
+      if (this.chartEngine === 'tradingview') {
+        btn.classList.add('is-active');
+      } else {
+        btn.classList.remove('is-active');
+      }
+    }
+
+    const apexArea = this.container ? this.container.querySelector('#apexcharts-area') : null;
+    const tvArea = this.container ? this.container.querySelector('#tradingview-area') : null;
+
+    if (this.chartEngine === 'tradingview') {
+      if (apexArea) apexArea.style.display = 'none';
+      if (tvArea) tvArea.style.display = 'block';
+      this.renderTradingViewChart();
+      showToast('📊 สลับไปใช้กราฟ TradingView เรียบร้อย');
+    } else {
+      if (tvArea) tvArea.style.display = 'none';
+      if (apexArea) apexArea.style.display = 'block';
+      this.updateChartData(true);
+      showToast('📈 สลับกลับมาใช้กราฟมาตรฐาน เรียบร้อย');
+    }
+  }
+
+  renderTradingViewChart() {
+    if (this.chartEngine !== 'tradingview') return;
+    const tvArea = this.container ? this.container.querySelector('#tradingview-area') : null;
+    if (!tvArea) return;
+
+    if (!this.tvChart) {
+      this.tvChart = new TradingViewChart(tvArea, {
+        theme: this.currentTheme,
+        mode: this.currentMode,
+        timeframe: this.currentTimeframe,
+        primaryPlan: this.primaryPlan,
+        activePlans: this.activePlans,
+        showSignals: this.showSignalOverlay,
+        onDoubleTapPin: (plan, price) => {
+          pinService.addPin(plan, price, 'ดับเบิลคลิกจาก TradingView');
+          showToast(`📌 ปักหมุด ${plan} ที่ราคา ${price.toFixed(4)} เรียบร้อย`);
+        }
+      });
+      this.tvChart.mount();
+    }
+
+    const targetPlan = this.primaryPlan || (this.activePlans && this.activePlans.size > 0 ? Array.from(this.activePlans)[0] : 'แผนเชิงรุก 35');
+    const analysis = analyzePlanTechnical(this.chartData, targetPlan);
+    const pins = pinService.getPinsForPlan(targetPlan);
+
+    this.tvChart.updateData({
+      chartData: this.chartData,
+      historyData: this.historyData,
+      summaryData: this.summaryData,
+      activePlans: this.activePlans,
+      primaryPlan: targetPlan,
+      mode: this.currentMode,
+      timeframe: this.currentTimeframe,
+      theme: this.currentTheme,
+      showSignals: this.showSignalOverlay,
+      analysis,
+      pins
+    });
+  }
+
+  // Alias for backward compatibility
+  toggleMacdSubChart() {
+    this.toggleSignalOverlay();
+  }
+
   /**
    * Clean up chart and event listeners
    */
   destroy() {
+    if (this.tvChart) {
+      try {
+        this.tvChart.destroy();
+      } catch (err) {}
+      this.tvChart = null;
+    }
+
     if (this.container && this.container.querySelectorAll) {
       const btns = this.container.querySelectorAll('.timeframe-btn');
       if (btns && btns.length > 0) {
@@ -1068,5 +1646,9 @@ export default {
   loadApexCharts,
   TIMEFRAMES,
   RANGE_DELTAS,
-  DEFAULT_PLAN_COLORS
+  DEFAULT_PLAN_COLORS,
+  calcEMA,
+  calcRSI,
+  analyzePlanTechnical,
+  buildMacdSubChartOptions
 };

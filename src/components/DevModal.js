@@ -94,6 +94,13 @@ export class DevModal {
     this.modalEl.setAttribute('aria-hidden', 'false');
   }
 
+  setVersion(verStr) {
+    if (!verStr) return;
+    this.version = verStr;
+    const el = this.modalEl ? this.modalEl.querySelector('#dev-visit-count') : document.getElementById('dev-visit-count');
+    if (el) el.textContent = verStr;
+  }
+
   close() {
     if (!this.modalEl) return;
     this.isOpen = false;
