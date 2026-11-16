@@ -359,11 +359,35 @@
         </div>
         <div class="body">
 
+          <!-- PnL Mode Selector (มิติการแสดงผล: บริหารเอง vs ตลอดอายุราชการ) -->
+          <div style="display:flex; background:rgba(255,255,255,0.06); padding:3px; border-radius:8px; margin-bottom:10px; border:1px solid var(--border); gap:4px;">
+            <button type="button" id="tab-pnl-active" onclick="switchPnlMode('active')"
+              style="flex:1; padding:7px 6px; font-size:11px; font-weight:700; border:none; border-radius:6px; cursor:pointer; background:var(--accent, #388bfd); color:#fff; transition:all 0.2s; font-family:inherit;">
+              🎯 บริหารเอง (ปี 65 - ปัจจุบัน)
+            </button>
+            <button type="button" id="tab-pnl-lifetime" onclick="switchPnlMode('lifetime')"
+              style="flex:1; padding:7px 6px; font-size:11px; font-weight:600; border:none; border-radius:6px; cursor:pointer; background:transparent; color:var(--muted); transition:all 0.2s; font-family:inherit;">
+              🏛️ ตลอดอายุงาน (Lifetime)
+            </button>
+          </div>
+
+          <!-- Profit/Loss Banner (แสดงผลกำไรชัดเจน ไม่ต้องซ่อน) -->
+          <div id="pnl-summary-banner"
+            style="background:rgba(56,139,253,0.07); border:1px solid rgba(56,139,253,0.25); border-radius:8px; padding:10px 12px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="flex:1; min-width:0; padding-right:8px;">
+              <div id="pnl-banner-label" style="font-size:11.5px; color:#8b949e; font-weight:600;">กำไรจากการบริหารพอร์ต</div>
+              <div id="pnl-banner-sub" style="font-size:9.5px; color:#58a6ff; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">ฐาน 117,008.99 ฿ (31 ธ.ค. 64) + นำส่งใหม่</div>
+            </div>
+            <div style="text-align:right; flex-shrink:0;">
+              <div id="pnl-banner-val" style="font-size:16px; font-weight:800; color:#4caf50;">+0.00 ฿</div>
+              <div id="pnl-banner-pct" style="font-size:11px; font-weight:700; color:#4caf50;">(+0.00%)</div>
+            </div>
+          </div>
+
           <div class="grid-2" style="margin-bottom: 12px;">
             <div class="card">
-              <div class="card-title"
-                style="white-space:nowrap; font-size:clamp(9px, 3.5vw, 11px); letter-spacing:-0.3px;">ต้นทุนรวม (ยกมา +
-                นำส่ง)</div>
+              <div class="card-title" id="lbl-cost-title"
+                style="white-space:nowrap; font-size:clamp(9px, 3.5vw, 11px); letter-spacing:-0.3px;">ต้นทุนฐาน (ยกมา + นำส่ง)</div>
               <div class="card-val" id="val-cost">0.00</div>
             </div>
             <div class="card">
@@ -830,7 +854,6 @@
   </div>
   </div>
 
-  <script src="config.js"></script>
   <script>
     const CONTRIB_DAY = 25; // วันที่ตัดเงินเดือน กบข. โดยประมาณ
     function toGregorianYear(y) { return y > 2500 ? y - 543 : y; }
@@ -1364,6 +1387,128 @@
       return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
+    // ─── การจัดการและคำนวณกำไรสุทธิ 2 มิติ (Active Era vs Lifetime Wealth) ───
+    const BASE_DEC_2564 = {
+      TOTAL_VALUE: 117008.99,      // มูลค่ารวมทั้งสิ้น ณ 31 ธ.ค. 2564 (ฐานเริ่มบริหารเอง)
+      PAST_PROFIT: 16715.30,       // ผลประโยชน์สะสมก่อนปี 2565
+      COMPENSATION: 23638.61,      // เงินชดเชยยกมา ณ 31 ธ.ค. 2564
+      MEMBER_AND_GOV: 76655.08,    // เงินสะสม + เงินสมทบยกมา ณ 31 ธ.ค. 2564
+      TRUE_PRINCIPAL: 100293.69    // เงินต้นแท้จริงยกมา (76,655.08 + 23,638.61)
+    };
+
+    let currentPnlMode = localStorage.getItem('gpf_pnl_mode') || 'active'; // 'active' หรือ 'lifetime'
+
+    function switchPnlMode(mode) {
+      currentPnlMode = mode;
+      localStorage.setItem('gpf_pnl_mode', mode);
+      updatePnlDisplay();
+    }
+
+    function updatePnlDisplay() {
+      if (!allData || !allData.myPort) return;
+      const port = allData.myPort;
+      const totalValue = window.globalTotalValue || 0;
+      const totalContrib = port.totalContrib || 0;
+
+      const btnActive = document.getElementById('tab-pnl-active');
+      const btnLifetime = document.getElementById('tab-pnl-lifetime');
+      const bannerLabel = document.getElementById('pnl-banner-label');
+      const bannerSub = document.getElementById('pnl-banner-sub');
+      const bannerVal = document.getElementById('pnl-banner-val');
+      const bannerPct = document.getElementById('pnl-banner-pct');
+      const costTitle = document.getElementById('lbl-cost-title');
+      const valCost = document.getElementById('val-cost');
+      const valPl = document.getElementById('val-pl');
+      const valPlPct = document.getElementById('val-pl-pct');
+
+      // 1) Active Era (เริ่ม 1 ม.ค. 65 - ปัจจุบัน)
+      // ฐานตั้งต้นคือมูลค่ารวม ณ 31 ธ.ค. 64 (117,008.99) + เงินส่งใหม่
+      const activeBase = (port.startingCost && port.startingCost > 0) ? port.startingCost : BASE_DEC_2564.TOTAL_VALUE;
+      const activeCost = activeBase + totalContrib;
+      const activeProfit = totalValue - activeCost;
+      const activeProfitPct = activeCost > 0 ? (activeProfit / activeCost) * 100 : 0;
+
+      // 2) Lifetime Wealth (ตลอดอายุราชการ)
+      // เงินต้นจริง = (เงินสะสม+สมทบ 76,655.08 + ชดเชย 23,638.61 = 100,293.69) + เงินส่งใหม่
+      // หมายเหตุ: ตัดดอกผลเก่า 16,715.30 ออกจากต้นทุน เพื่อให้นับเป็นกำไรแท้จริง
+      const lifetimeBase = BASE_DEC_2564.TRUE_PRINCIPAL;
+      const lifetimeCost = lifetimeBase + totalContrib;
+      const lifetimeProfit = totalValue - lifetimeCost;
+      const lifetimeProfitPct = lifetimeCost > 0 ? (lifetimeProfit / lifetimeCost) * 100 : 0;
+
+      if (currentPnlMode === 'lifetime') {
+        if (btnActive) {
+          btnActive.style.background = 'transparent';
+          btnActive.style.color = 'var(--muted)';
+          btnActive.style.fontWeight = '600';
+        }
+        if (btnLifetime) {
+          btnLifetime.style.background = 'var(--accent, #388bfd)';
+          btnLifetime.style.color = '#fff';
+          btnLifetime.style.fontWeight = '700';
+        }
+        if (bannerLabel) bannerLabel.textContent = 'กำไรสะสมตลอดอายุราชการ (Lifetime Wealth)';
+        if (bannerSub) bannerSub.textContent = `เงินต้นจริงยกมา 100,293.69 ฿ (ตัดดอกผลเก่าออก) + เงินส่งใหม่ ${formatMoney(totalContrib)} ฿`;
+        if (costTitle) costTitle.textContent = 'เงินต้นจริงสะสม (สะสม + สมทบ + ชดเชย)';
+        if (valCost) valCost.textContent = formatMoney(lifetimeCost);
+
+        const color = lifetimeProfit >= 0 ? '#4caf50' : '#f44336';
+        const sign = lifetimeProfit >= 0 ? '+' : '';
+        if (bannerVal) {
+          bannerVal.textContent = `${sign}${formatMoney(lifetimeProfit)} ฿`;
+          bannerVal.style.color = color;
+        }
+        if (bannerPct) {
+          bannerPct.textContent = `(${sign}${lifetimeProfitPct.toFixed(2)}%)`;
+          bannerPct.style.color = color;
+        }
+        if (valPl) {
+          valPl.textContent = formatMoney(lifetimeProfit);
+          valPl.style.color = color;
+        }
+        if (valPlPct) {
+          valPlPct.textContent = `${sign}${lifetimeProfitPct.toFixed(2)}%`;
+          valPlPct.style.color = color;
+        }
+        window.globalTotalCost = lifetimeCost;
+      } else {
+        if (btnActive) {
+          btnActive.style.background = 'var(--accent, #388bfd)';
+          btnActive.style.color = '#fff';
+          btnActive.style.fontWeight = '700';
+        }
+        if (btnLifetime) {
+          btnLifetime.style.background = 'transparent';
+          btnLifetime.style.color = 'var(--muted)';
+          btnLifetime.style.fontWeight = '600';
+        }
+        if (bannerLabel) bannerLabel.textContent = 'กำไรจากการบริหารพอร์ต (ปี 65 - ปัจจุบัน)';
+        if (bannerSub) bannerSub.textContent = `ฐาน 117,008.99 ฿ (ณ 31 ธ.ค. 64) + เงินส่งใหม่ ${formatMoney(totalContrib)} ฿`;
+        if (costTitle) costTitle.textContent = 'ต้นทุนฐาน (มูลค่า 31 ธ.ค. 64 + เงินส่งใหม่)';
+        if (valCost) valCost.textContent = formatMoney(activeCost);
+
+        const color = activeProfit >= 0 ? '#4caf50' : '#f44336';
+        const sign = activeProfit >= 0 ? '+' : '';
+        if (bannerVal) {
+          bannerVal.textContent = `${sign}${formatMoney(activeProfit)} ฿`;
+          bannerVal.style.color = color;
+        }
+        if (bannerPct) {
+          bannerPct.textContent = `(${sign}${activeProfitPct.toFixed(2)}%)`;
+          bannerPct.style.color = color;
+        }
+        if (valPl) {
+          valPl.textContent = formatMoney(activeProfit);
+          valPl.style.color = color;
+        }
+        if (valPlPct) {
+          valPlPct.textContent = `${sign}${activeProfitPct.toFixed(2)}%`;
+          valPlPct.style.color = color;
+        }
+        window.globalTotalCost = activeCost;
+      }
+    }
+
     function initDashboard() {
       const port = allData.myPort;
       if (allData.dates && allData.dates.length > 0) {
@@ -1424,11 +1569,15 @@
 
             if (u.units > 0) {
               let plHtml = '';
-              if (u.cost > 0) {
+              const allocPct = totalValue > 0 ? ((val / totalValue) * 100).toFixed(1) : '0.0';
+              const sumUnitCost = port.units.reduce((s, x) => s + (x.cost || 0), 0);
+              if (u.cost > 0 && Math.abs(sumUnitCost - totalCost) < 50) {
                 const planPl = val - u.cost;
                 const planPlPct = (planPl / u.cost) * 100;
                 const color = planPl >= 0 ? '#4caf50' : '#f44336';
                 plHtml = `<div style="font-size:12px;color:${color};">กำไร: ${planPl >= 0 ? '+' : ''}${formatMoney(planPl)} ฿ (${planPlPct.toFixed(2)}%)</div>`;
+              } else {
+                plHtml = `<div style="font-size:11px;color:#58a6ff;margin-top:2px;">สัดส่วน ${allocPct}% ของพอร์ต</div>`;
               }
               breakdownEl.innerHTML += `
             <div class="table-row" style="align-items: flex-start; justify-content: space-between;">
@@ -1493,23 +1642,9 @@
         }
       }
 
-      const plBaht = totalValue - totalCost;
-      const plPct = totalCost > 0 ? (plBaht / totalCost) * 100 : 0;
-
       window.globalTotalValue = totalValue;
-      window.globalTotalCost = totalCost;
-
-      document.getElementById('val-cost').textContent = formatMoney(totalCost);
+      updatePnlDisplay();
       document.getElementById('val-current').textContent = formatMoney(totalValue);
-      document.getElementById('val-pl').textContent = formatMoney(plBaht);
-      document.getElementById('val-pl').style.color = plBaht >= 0 ? '#4caf50' : '#f44336';
-      document.getElementById('val-pl-pct').textContent = plPct.toFixed(2) + '%';
-      document.getElementById('val-pl-pct').style.color = plPct >= 0 ? '#4caf50' : '#f44336';
-
-      let sumUnitCost = port.units.reduce((s, u) => s + (u.cost || 0), 0);
-      if (Math.abs(sumUnitCost - totalCost) > 1 && totalCost > 0) {
-        console.warn(`[P/L Warning] ผลรวมต้นทุนรายแผน (${formatMoney(sumUnitCost)} ฿) ไม่ตรงกับต้นทุนรวมจากกระแสเงินสด (${formatMoney(totalCost)} ฿) อาจทำให้กำไรแยกส่วนไม่เท่ากับกำไรรวม`);
-      }
 
       // ─── คำนวณและแสดงผล XIRR ย้อนหลังหลายช่วงเวลา ───
       try {
