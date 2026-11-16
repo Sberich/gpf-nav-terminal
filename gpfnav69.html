@@ -2442,7 +2442,19 @@
           restorePins();
         } else {
           if (dataChanged) {
-            document.getElementById('update-date-text').innerHTML = '<span style="color:#4caf50; cursor:pointer; text-decoration:underline;" onclick="location.reload()">✨ ข้อมูลใหม่มาแล้ว (คลิกเพื่อรีเฟรช)</span>';
+            allData = data;
+            initDashboard();
+            restorePins();
+            const dStr = allData.endDate || '';
+            const d = new Date(dStr);
+            let formatted = dStr;
+            if (!isNaN(d.getTime())) {
+              formatted = d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+            }
+            document.getElementById('update-date-text').innerHTML = `ข้อมูลล่าสุด: ${formatted}`;
+            if (typeof showToast === 'function') {
+              showToast(`✨ อัปเดตข้อมูลล่าสุดเป็น ${formatted} แล้ว`, null, 'success');
+            }
           } else {
             // Just restore the normal date text
             const dStr = allData.endDate || '';
