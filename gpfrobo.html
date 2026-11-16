@@ -2184,30 +2184,42 @@
   }
 
   async function loadGPFData() {
+    // 1. Direct fetch: Load real GPF historical chart dataset directly from local /data/nav_chart.json
+    try {
+      const chartRes = await fetch('./data/nav_chart.json?t=' + Date.now());
+      if (chartRes.ok) {
+        const chartData = await chartRes.json();
+        const PLAN_COLORS = [
+          '#00BCD4', '#2196F3', '#E91E63', '#8BC34A', '#607D8B', '#FF9800',
+          '#009688', '#F44336', '#9C27B0', '#FF5722', '#FFC107', '#3F51B5',
+          '#FF6F00', '#4CAF50', '#FF6F00'
+        ];
+        allData = {
+          dates: chartData.dates,
+          fullDates: chartData.dates,
+          plans: chartData.series.map((s, idx) => ({
+            key: s.name,
+            label: s.name,
+            color: PLAN_COLORS[idx % PLAN_COLORS.length],
+            data: s.data,
+            fullData: s.data
+          }))
+        };
+        console.log("✅ Successfully loaded real GPF NAV dataset from local engine:", allData.dates.length, "days up to", allData.dates[allData.dates.length - 1]);
+      }
+    } catch (err) {
+      console.warn("Could not load local nav_chart.json, will try GAS or fallback:", err);
+    }
+
+    // 2. Optional: Query personal portfolio from GAS if available
     try {
       const res = await fetch(GAS_URL + "?action=data&t=" + Date.now() + "&deviceId=" + getDeviceId());
-      allData = await res.json();
-      
-      if (allData.error) {
-        if (allData.error === "Unauthorized_Device") {
-          const pin = await requestPin();
-          if (pin) {
-            const regRes = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'register_device', deviceId: getDeviceId(), pin: pin }) });
-            const regData = await regRes.json();
-            if (regData.success) { showToast("เชื่อมต่อสำเร็จ! กำลังโหลดข้อมูล..."); return loadGPFData(); } 
-            else { showToast(regData.error || "รหัส PIN ไม่ถูกต้อง", 'error'); }
-          }
-          document.getElementById('currentBalance').removeAttribute('readonly');
-          document.getElementById('currentBalance').placeholder = "กรอกยอดเงิน กบข. ปัจจุบัน";
-          return;
-        } else {
-          alert("เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: " + allData.error);
-          allData = null;
-          return;
+      const gasData = await res.json();
+      if (gasData && gasData.myPort) {
+        if (!allData && gasData.plans) {
+          allData = gasData;
         }
-      }
-      
-      if (allData && allData.myPort) {
+        allData.myPort = gasData.myPort;
         let bal = 0;
         if (allData.myPort.units && allData.plans) {
           allData.myPort.units.forEach(u => {
@@ -2225,18 +2237,22 @@
         document.getElementById('currentBalance').removeAttribute('readonly');
         if (bal > 0) {
           document.getElementById('currentBalance').value = Math.floor(bal);
-        } else {
-          document.getElementById('currentBalance').placeholder = "กรอกยอดเงิน กบข. ปัจจุบันเอง (ระบบดึงอัตโนมัติไม่สำเร็จ)";
         }
       }
     } catch (e) {
-      console.warn("API Fetch failed, using Demo Data.", e);
+      console.log("GAS personal portfolio check skipped or offline:", e.message);
+    }
+
+    // 3. Fallback only if no data at all
+    if (!allData) {
       allData = generateFallbackData();
-      document.getElementById('currentBalance').removeAttribute('readonly');
-      document.getElementById('currentBalance').placeholder = "กรอกยอดเงิน กบข. ปัจจุบัน (โหมดจำลอง)";
-      // === FIX 🔵: Show red demo banner ===
       document.getElementById('demoBanner').classList.add('show');
       document.body.classList.add('has-demo-banner');
+    }
+
+    document.getElementById('currentBalance').removeAttribute('readonly');
+    if (!document.getElementById('currentBalance').value) {
+      document.getElementById('currentBalance').placeholder = "กรอกยอดเงิน กบข. ปัจจุบัน";
     }
   }
   

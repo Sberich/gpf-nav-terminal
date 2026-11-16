@@ -2398,6 +2398,36 @@
       }
     }
 
+    // Fast Static Engine Sync: Instantly check /data/nav_summary.json without waiting for Google Apps Script
+    fetch('./data/nav_summary.json?t=' + Date.now())
+      .then(r => r.json())
+      .then(summary => {
+        if (summary && summary.latestDate && allData && allData.plans) {
+          if (summary.latestDate > (allData.endDate || '')) {
+            console.log("⚡ Fast Sync: Found newer NAV from static engine:", summary.latestDate);
+            allData.endDate = summary.latestDate;
+            if (allData.dates && !allData.dates.includes(summary.latestDate)) {
+              allData.dates.push(summary.latestDate);
+            }
+            if (summary.plans) {
+              allData.plans.forEach(p => {
+                const sPlan = summary.plans[p.label] || summary.plans[p.key];
+                if (sPlan && sPlan.latestNav) {
+                  if (p.data && p.data.length > 0) p.data.push(sPlan.latestNav);
+                  if (p.fullData && p.fullData.length > 0) p.fullData.push(sPlan.latestNav);
+                }
+              });
+            }
+            initDashboard();
+            restorePins();
+            const d = new Date(summary.latestDate);
+            const formatted = !isNaN(d.getTime()) ? d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : summary.latestDate;
+            document.getElementById('update-date-text').innerHTML = `ข้อมูลล่าสุด: ${formatted}`;
+          }
+        }
+      })
+      .catch(() => {});
+
     const loadTimeout = setTimeout(() => {
       if (isInitialLoad) {
         const loader = document.getElementById('loader');
