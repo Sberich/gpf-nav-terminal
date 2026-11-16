@@ -1420,6 +1420,31 @@
       const totalValue = window.globalTotalValue || 0;
       const totalContrib = port.totalContrib || 0;
 
+      // ─── แยกยอดเงินนำส่ง: ก่อนปี 2565 vs ตั้งแต่ปี 2565 เป็นต้นไป ───
+      // ป้องกันการนับซ้ำ: หากชีตมีบันทึกเงินส่งตั้งแต่ปี 2560 เงินช่วงปี 60-64 ถูกรวมอยู่ใน 117,008.99 แล้ว
+      let contribsActiveEra = 0; // เงินส่งใหม่ (ปี 2565 - ปัจจุบัน)
+      let contribsBefore65 = 0;   // เงินส่งเก่า (ก่อนปี 2565 เช่น 2560-2564)
+      
+      if (port.contribs && port.contribs.length > 0) {
+        port.contribs.forEach(c => {
+          let yr = 0;
+          if (c.date) {
+            const parts = c.date.split('/');
+            yr = parseInt(parts[1] || parts[0]);
+            if (yr < 2500 && yr > 2000) yr += 543;
+          }
+          const amt = parseFloat(c.amount) || 0;
+          if (yr >= 2565) {
+            contribsActiveEra += amt;
+          } else if (yr > 0 && yr < 2565) {
+            contribsBefore65 += amt;
+          }
+        });
+      }
+
+      // หากมีบันทึกเงินส่งก่อนปี 65 ในชีต ให้ใช้เงินส่งใหม่เฉพาะปี 65+ เพื่อไม่ให้เกิดการนับเบิ้ล
+      const effectiveNewContrib = (contribsBefore65 > 0) ? contribsActiveEra : totalContrib;
+
       const btnActive = document.getElementById('tab-pnl-active');
       const btnLifetime = document.getElementById('tab-pnl-lifetime');
       const bannerLabel = document.getElementById('pnl-banner-label');
@@ -1432,17 +1457,17 @@
       const valPlPct = document.getElementById('val-pl-pct');
 
       // 1) Active Era (เริ่ม 1 ม.ค. 65 - ปัจจุบัน)
-      // ฐานตั้งต้นคือมูลค่ารวม ณ 31 ธ.ค. 64 (117,008.99) + เงินส่งใหม่
+      // ฐานตั้งต้นคือมูลค่ารวม ณ 31 ธ.ค. 64 (117,008.99) + เงินส่งใหม่เฉพาะตั้งแต่ปี 65
       const activeBase = (port.startingCost && port.startingCost > 0) ? port.startingCost : BASE_DEC_2564.TOTAL_VALUE;
-      const activeCost = activeBase + totalContrib;
+      const activeCost = activeBase + effectiveNewContrib;
       const activeProfit = totalValue - activeCost;
       const activeProfitPct = activeCost > 0 ? (activeProfit / activeCost) * 100 : 0;
 
       // 2) Lifetime Wealth (ตลอดอายุราชการ)
-      // เงินต้นจริง = (เงินสะสม+สมทบ 76,655.08 + ชดเชย 23,638.61 = 100,293.69) + เงินส่งใหม่
+      // เงินต้นจริง = (เงินสะสม+สมทบ 76,655.08 + ชดเชย 23,638.61 = 100,293.69) + เงินส่งใหม่ตั้งแต่ปี 65
       // หมายเหตุ: ตัดดอกผลเก่า 16,715.30 ออกจากต้นทุน เพื่อให้นับเป็นกำไรแท้จริง
       const lifetimeBase = BASE_DEC_2564.TRUE_PRINCIPAL;
-      const lifetimeCost = lifetimeBase + totalContrib;
+      const lifetimeCost = lifetimeBase + effectiveNewContrib;
       const lifetimeProfit = totalValue - lifetimeCost;
       const lifetimeProfitPct = lifetimeCost > 0 ? (lifetimeProfit / lifetimeCost) * 100 : 0;
 
@@ -1460,7 +1485,7 @@
           btnLifetime.style.fontWeight = '700';
         }
         if (bannerLabel) bannerLabel.textContent = 'กำไรตลอดอายุราชการ';
-        if (bannerSub) bannerSub.innerHTML = `เงินต้นจริงยกมา <b>100,293.69 ฿</b> (ตัดดอกผลเก่า) + เงินส่งใหม่ <b>${formatMoney(totalContrib)} ฿</b>`;
+        if (bannerSub) bannerSub.innerHTML = `เงินต้นจริงยกมา <b>100,293.69 ฿</b> (ตัดดอกผลเก่า) + เงินส่งใหม่ <b>${formatMoney(effectiveNewContrib)} ฿</b>`;
         if (costTitle) costTitle.textContent = 'เงินต้นจริงสะสม';
         if (valCost) valCost.textContent = formatMoney(lifetimeCost);
 
@@ -1499,7 +1524,7 @@
           btnLifetime.style.fontWeight = '600';
         }
         if (bannerLabel) bannerLabel.textContent = 'กำไรพอร์ตบริหารเอง';
-        if (bannerSub) bannerSub.innerHTML = `ฐาน 31 ธ.ค. 64 <b>(117,008.99 ฿)</b> + เงินส่งใหม่ <b>${formatMoney(totalContrib)} ฿</b>`;
+        if (bannerSub) bannerSub.innerHTML = `ฐาน 31 ธ.ค. 64 <b>(117,008.99 ฿)</b> + เงินส่งใหม่ <b>${formatMoney(effectiveNewContrib)} ฿</b>`;
         if (costTitle) costTitle.textContent = 'ต้นทุนฐานรวม';
         if (valCost) valCost.textContent = formatMoney(activeCost);
 
