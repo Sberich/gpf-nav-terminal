@@ -73,6 +73,93 @@ PLAN_COLORS: Dict[str, str] = {
     "แผนเกษียณสบายใจ 2569": "#FF6F00",
 }
 
+GPF_API_BASE = "https://www.gpf.or.th/thai2019/About/memberfund-api.php"
+GPF_PLAN_MAP: Dict[str, str] = {
+    "UNIT_COST1": "แผนลงทุนพื้นฐานทั่วไป",
+    "UNIT_COST2": "แผนเชิงรุก 35",
+    "UNIT_COST3": "แผนตราสารหนี้",
+    "UNIT_COST4": "แผนเงินฝากและตราสารหนี้ระยะสั้น",
+    "UNIT_COST5": "แผนเชิงรุก 20",
+    "UNIT_COST6": "แผนเชิงรุก 65",
+    "UNIT_COST7": "แผนหุ้นไทย",
+    "UNIT_COST8": "แผนกองทุนอสังหาริมทรัพย์ไทย",
+    "UNIT_COST9": "แผนหุ้นต่างประเทศ",
+    "UNIT_COST11": "แผนตราสารหนี้ต่างประเทศ",
+    "UNIT_COST12": "แผนทองคำ",
+    "UNIT_COST13": "แผนเชิงรุก 75",
+    "UNIT_COST14": "แผนกองทุนรวมวายุภักษ์",
+    "UNIT_COST15": "แผนเกษียณสบายใจ 2569",
+    "UNIT_COST16": "แผนการลงทุนตามหลักชะรีอะฮ์",
+}
+
+
+def fetch_gpf_direct_records(timeout: int = 15) -> List[Dict]:
+    """Fetch daily NAV data directly from official GPF API (gpf.or.th) with standard browser headers."""
+    import urllib.request
+    now = datetime.datetime.now()
+    months_to_try = [(now.month, now.year)]
+    if now.day <= 5:
+        prev_m = 12 if now.month == 1 else now.month - 1
+        prev_y = now.year - 1 if now.month == 1 else now.year
+        months_to_try.insert(0, (prev_m, prev_y))
+
+    raw_items = []
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "th-TH,th;q=0.9,en;q=0.8",
+    }
+
+    for m, y in months_to_try:
+        url = f"{GPF_API_BASE}?pageName=NAVBottom_{m}_{y}"
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                text = resp.read().decode("utf-8")
+                if text and text.strip() not in ("", "[]"):
+                    parsed = json.loads(text)
+                    if isinstance(parsed, list):
+                        raw_items.extend(parsed)
+        except Exception as e:
+            print(f"Notice: GPF direct API for {m}/{y} returned: {e}", file=sys.stderr)
+
+    if not raw_items:
+        return []
+
+    results = []
+    seen_dates = set()
+    for item in raw_items:
+        date_raw = item.get("LAUNCH_DATE") or item.get("CAL_FROM_DATE") or ""
+        if not date_raw:
+            continue
+        try:
+            parts = date_raw.split(" ")[0].split("/")
+            day, month, year = int(parts[0]), int(parts[1]), int(parts[2])
+            if year > 2400:
+                year -= 543
+            iso_date = f"{year:04d}-{month:02d}-{day:02d}"
+        except Exception:
+            continue
+
+        if iso_date in seen_dates:
+            continue
+        seen_dates.add(iso_date)
+
+        plans = {}
+        for cost_key, plan_name in GPF_PLAN_MAP.items():
+            val = item.get(cost_key)
+            try:
+                plans[plan_name] = float(val) if val is not None else None
+            except (ValueError, TypeError):
+                plans[plan_name] = None
+        results.append({"date": iso_date, "plans": plans})
+
+    results.sort(key=lambda r: r["date"])
+    return results
+
 LOOKBACK_DELTAS: Dict[str, int] = {
     "1M": 30,
     "3M": 91,
@@ -377,6 +464,22 @@ def ingest_new_records(
     return updated, len(new_candidates)
 
 
+def save_json_synced(path: str, data: any) -> None:
+    """Save JSON data to path and mirror to root folder if saving under public/data."""
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    norm = os.path.normpath(os.path.abspath(path))
+    target_seg = os.path.join("public", "data")
+    if target_seg in norm:
+        root_path = norm.replace(target_seg, "data")
+        if root_path != norm:
+            os.makedirs(os.path.dirname(root_path), exist_ok=True)
+            with open(root_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+
+
 def update_nav(
     csv_url: str = DEFAULT_CSV_URL,
     csv_file: Optional[str] = None,
@@ -397,23 +500,41 @@ def update_nav(
                 print(f"Warning: Could not parse existing history file: {e}", file=sys.stderr)
                 existing_records = []
 
-    # 2. Fetch / Read upstream CSV
-    if csv_file is not None:
-        print(f"Reading upstream CSV from file: {csv_file}")
-        with open(csv_file, "r", encoding="utf-8") as f:
-            csv_content = f.read()
-    else:
-        print(f"Fetching upstream CSV from: {csv_url}")
-        csv_content = fetch_google_sheet_csv(csv_url)
+    # 2. Ingest: Primary direct from official GPF API (gpf.or.th), fallback to Google Sheet CSV
+    direct_records = []
+    if csv_file is None:
+        try:
+            print("Fetching NAV directly from official GPF API (gpf.or.th)...")
+            direct_records = fetch_gpf_direct_records()
+            if direct_records:
+                print(f"Successfully fetched {len(direct_records)} records from GPF API (latest: {direct_records[-1]['date']}).")
+        except Exception as e:
+            print(f"Notice: Direct GPF API fetch encountered: {e}. Falling back to Google Sheet CSV.", file=sys.stderr)
 
-    # 3. Ingest and deduplicate
-    updated_records, count_added = ingest_new_records(existing_records, csv_content)
+    if direct_records:
+        latest_existing_date = existing_records[-1]["date"] if existing_records else ""
+        new_candidates = [r for r in direct_records if r["date"] > latest_existing_date]
+        if new_candidates:
+            updated_records = list(existing_records) + new_candidates
+            updated_records.sort(key=lambda r: r["date"])
+            count_added = len(new_candidates)
+        else:
+            updated_records = existing_records
+            count_added = 0
+    else:
+        # Fallback to upstream Google Sheet CSV
+        if csv_file is not None:
+            print(f"Reading upstream CSV from file: {csv_file}")
+            with open(csv_file, "r", encoding="utf-8") as f:
+                csv_content = f.read()
+        else:
+            print(f"Fetching upstream CSV from fallback: {csv_url}")
+            csv_content = fetch_google_sheet_csv(csv_url)
+        updated_records, count_added = ingest_new_records(existing_records, csv_content)
 
     if count_added > 0:
         print(f"Ingested {count_added} new records (latest: {updated_records[-1]['date']}).")
-        os.makedirs(os.path.dirname(os.path.abspath(history_path)), exist_ok=True)
-        with open(history_path, "w", encoding="utf-8") as f:
-            json.dump(updated_records, f, ensure_ascii=False, indent=2)
+        save_json_synced(history_path, updated_records)
     else:
         latest_date = updated_records[-1]["date"] if updated_records else "N/A"
         print(f"NAV history is already up to date. Latest date: {latest_date}.")
@@ -438,15 +559,11 @@ def update_nav(
 
     # 4. Generate summary and chart JSON
     summary_data = generate_nav_summary(updated_records)
-    os.makedirs(os.path.dirname(os.path.abspath(summary_path)), exist_ok=True)
-    with open(summary_path, "w", encoding="utf-8") as f:
-        json.dump(summary_data, f, ensure_ascii=False, indent=2)
+    save_json_synced(summary_path, summary_data)
     print(f"Successfully wrote NAV summary to: {summary_path}")
 
     chart_data = generate_nav_chart(updated_records, max_points=max_chart_points)
-    os.makedirs(os.path.dirname(os.path.abspath(chart_path)), exist_ok=True)
-    with open(chart_path, "w", encoding="utf-8") as f:
-        json.dump(chart_data, f, ensure_ascii=False, indent=2)
+    save_json_synced(chart_path, chart_data)
     print(f"Successfully wrote NAV chart data ({chart_data['count']} points) to: {chart_path}")
 
     # 5. Optionally invoke export generator if available
@@ -457,6 +574,19 @@ def update_nav(
             history_path=history_path, summary_path=summary_path, export_dir=export_dir
         )
         print(f"Successfully generated exports: CSV={export_res['csv']}, XLSX={export_res['xlsx']}")
+
+        # Mirror exports to root export/ if under public/export
+        norm_exp = os.path.normpath(export_dir)
+        target_exp = os.path.join("public", "export")
+        if target_exp in norm_exp:
+            root_exp = norm_exp.replace(target_exp, "export")
+            if root_exp != norm_exp:
+                os.makedirs(root_exp, exist_ok=True)
+                import shutil
+                if os.path.exists(export_res["csv"]):
+                    shutil.copy2(export_res["csv"], os.path.join(root_exp, "gpf_nav_history.csv"))
+                if os.path.exists(export_res["xlsx"]):
+                    shutil.copy2(export_res["xlsx"], os.path.join(root_exp, "gpf_nav_history.xlsx"))
     except ImportError:
         pass
     except Exception as e:
