@@ -360,39 +360,49 @@
         <div class="body">
 
           <!-- PnL Mode Selector (มิติการแสดงผล: บริหารเอง vs ตลอดอายุราชการ) -->
-          <div style="display:flex; background:rgba(255,255,255,0.06); padding:3px; border-radius:8px; margin-bottom:10px; border:1px solid var(--border); gap:4px;">
+          <div style="display:flex; background:rgba(255,255,255,0.06); padding:3px; border-radius:9px; margin-bottom:8px; border:1px solid var(--border); gap:4px;">
             <button type="button" id="tab-pnl-active" onclick="switchPnlMode('active')"
-              style="flex:1; padding:7px 6px; font-size:11px; font-weight:700; border:none; border-radius:6px; cursor:pointer; background:var(--accent, #388bfd); color:#fff; transition:all 0.2s; font-family:inherit;">
-              🎯 บริหารเอง (ปี 65 - ปัจจุบัน)
+              style="flex:1; padding:6px 4px; border:none; border-radius:7px; cursor:pointer; background:var(--accent, #388bfd); color:#fff; transition:all 0.2s; font-family:inherit; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; min-height:40px;">
+              <span style="font-size:11.5px; font-weight:700; white-space:nowrap; display:flex; align-items:center; gap:4px;">
+                <span>🎯</span> <span>บริหารเอง</span>
+              </span>
+              <span style="font-size:9.5px; opacity:0.85; white-space:nowrap;">ปี 65 - ปัจจุบัน</span>
             </button>
             <button type="button" id="tab-pnl-lifetime" onclick="switchPnlMode('lifetime')"
-              style="flex:1; padding:7px 6px; font-size:11px; font-weight:600; border:none; border-radius:6px; cursor:pointer; background:transparent; color:var(--muted); transition:all 0.2s; font-family:inherit;">
-              🏛️ ตลอดอายุงาน (Lifetime)
+              style="flex:1; padding:6px 4px; border:none; border-radius:7px; cursor:pointer; background:transparent; color:var(--muted); transition:all 0.2s; font-family:inherit; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; min-height:40px;">
+              <span style="font-size:11.5px; font-weight:700; white-space:nowrap; display:flex; align-items:center; gap:4px;">
+                <span>🏛️</span> <span>ตลอดอายุงาน</span>
+              </span>
+              <span style="font-size:9.5px; opacity:0.85; white-space:nowrap;">Lifetime Wealth</span>
             </button>
           </div>
 
-          <!-- Profit/Loss Banner (แสดงผลกำไรชัดเจน ไม่ต้องซ่อน) -->
+          <!-- Profit/Loss Banner (สไตล์การเงิน 2 แถว ชัดเจน สบายตา ไม่โดนตัดขอบ) -->
           <div id="pnl-summary-banner"
-            style="background:rgba(56,139,253,0.07); border:1px solid rgba(56,139,253,0.25); border-radius:8px; padding:10px 12px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-            <div style="flex:1; min-width:0; padding-right:8px;">
-              <div id="pnl-banner-label" style="font-size:11.5px; color:#8b949e; font-weight:600;">กำไรจากการบริหารพอร์ต</div>
-              <div id="pnl-banner-sub" style="font-size:9.5px; color:#58a6ff; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">ฐาน 117,008.99 ฿ (31 ธ.ค. 64) + นำส่งใหม่</div>
+            style="background:rgba(56,139,253,0.07); border:1px solid rgba(56,139,253,0.25); border-radius:10px; padding:9px 12px; margin-bottom:8px; display:flex; flex-direction:column; gap:5px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline;">
+              <div id="pnl-banner-label" style="font-size:12px; color:var(--muted, #8b949e); font-weight:700; letter-spacing:-0.2px;">กำไรพอร์ตบริหารเอง</div>
+              <div style="text-align:right; display:flex; align-items:baseline; gap:5px;">
+                <span id="pnl-banner-val" style="font-size:16.5px; font-weight:800; color:#4caf50; letter-spacing:-0.3px;">+0.00 ฿</span>
+                <span id="pnl-banner-pct" style="font-size:11.5px; font-weight:700; color:#4caf50;">(+0.00%)</span>
+              </div>
             </div>
-            <div style="text-align:right; flex-shrink:0;">
-              <div id="pnl-banner-val" style="font-size:16px; font-weight:800; color:#4caf50;">+0.00 ฿</div>
-              <div id="pnl-banner-pct" style="font-size:11px; font-weight:700; color:#4caf50;">(+0.00%)</div>
+            <div style="border-top:1px dashed rgba(255,255,255,0.08); padding-top:4px;">
+              <div id="pnl-banner-sub" style="font-size:9.5px; color:#58a6ff; font-weight:500; line-height:1.35; white-space:normal; word-break:break-word;">
+                ฐาน 117,008.99 ฿ (ณ 31 ธ.ค. 64) + นำส่งใหม่
+              </div>
             </div>
           </div>
 
-          <div class="grid-2" style="margin-bottom: 12px;">
-            <div class="card">
+          <div class="grid-2" style="margin-bottom: 8px;">
+            <div class="card" style="padding: 10px 12px;">
               <div class="card-title" id="lbl-cost-title"
-                style="white-space:nowrap; font-size:clamp(9px, 3.5vw, 11px); letter-spacing:-0.3px;">ต้นทุนฐาน (ยกมา + นำส่ง)</div>
-              <div class="card-val" id="val-cost">0.00</div>
+                style="white-space:nowrap; font-size:11px; font-weight:600; color:var(--muted);">ต้นทุนฐานรวม</div>
+              <div class="card-val" id="val-cost" style="font-size:16.5px; font-weight:800;">0.00</div>
             </div>
-            <div class="card">
-              <div class="card-title">มูลค่าปัจจุบัน</div>
-              <div class="card-val" id="val-current" style="color: #58a6ff;">0.00</div>
+            <div class="card" style="padding: 10px 12px;">
+              <div class="card-title" style="white-space:nowrap; font-size:11px; font-weight:600; color:var(--muted);">มูลค่าพอร์ตปัจจุบัน</div>
+              <div class="card-val" id="val-current" style="color: #58a6ff; font-size:16.5px; font-weight:800;">0.00</div>
             </div>
           </div>
 
@@ -1436,6 +1446,8 @@
       const lifetimeProfit = totalValue - lifetimeCost;
       const lifetimeProfitPct = lifetimeCost > 0 ? (lifetimeProfit / lifetimeCost) * 100 : 0;
 
+      const bannerBox = document.getElementById('pnl-summary-banner');
+
       if (currentPnlMode === 'lifetime') {
         if (btnActive) {
           btnActive.style.background = 'transparent';
@@ -1447,13 +1459,17 @@
           btnLifetime.style.color = '#fff';
           btnLifetime.style.fontWeight = '700';
         }
-        if (bannerLabel) bannerLabel.textContent = 'กำไรสะสมตลอดอายุราชการ (Lifetime Wealth)';
-        if (bannerSub) bannerSub.textContent = `เงินต้นจริงยกมา 100,293.69 ฿ (ตัดดอกผลเก่าออก) + เงินส่งใหม่ ${formatMoney(totalContrib)} ฿`;
-        if (costTitle) costTitle.textContent = 'เงินต้นจริงสะสม (สะสม + สมทบ + ชดเชย)';
+        if (bannerLabel) bannerLabel.textContent = 'กำไรตลอดอายุราชการ';
+        if (bannerSub) bannerSub.innerHTML = `เงินต้นจริงยกมา <b>100,293.69 ฿</b> (ตัดดอกผลเก่า) + เงินส่งใหม่ <b>${formatMoney(totalContrib)} ฿</b>`;
+        if (costTitle) costTitle.textContent = 'เงินต้นจริงสะสม';
         if (valCost) valCost.textContent = formatMoney(lifetimeCost);
 
         const color = lifetimeProfit >= 0 ? '#4caf50' : '#f44336';
         const sign = lifetimeProfit >= 0 ? '+' : '';
+        if (bannerBox) {
+          bannerBox.style.borderColor = lifetimeProfit >= 0 ? 'rgba(76,175,80,0.35)' : 'rgba(244,67,54,0.35)';
+          bannerBox.style.background = lifetimeProfit >= 0 ? 'rgba(76,175,80,0.06)' : 'rgba(244,67,54,0.06)';
+        }
         if (bannerVal) {
           bannerVal.textContent = `${sign}${formatMoney(lifetimeProfit)} ฿`;
           bannerVal.style.color = color;
@@ -1482,13 +1498,17 @@
           btnLifetime.style.color = 'var(--muted)';
           btnLifetime.style.fontWeight = '600';
         }
-        if (bannerLabel) bannerLabel.textContent = 'กำไรจากการบริหารพอร์ต (ปี 65 - ปัจจุบัน)';
-        if (bannerSub) bannerSub.textContent = `ฐาน 117,008.99 ฿ (ณ 31 ธ.ค. 64) + เงินส่งใหม่ ${formatMoney(totalContrib)} ฿`;
-        if (costTitle) costTitle.textContent = 'ต้นทุนฐาน (มูลค่า 31 ธ.ค. 64 + เงินส่งใหม่)';
+        if (bannerLabel) bannerLabel.textContent = 'กำไรพอร์ตบริหารเอง';
+        if (bannerSub) bannerSub.innerHTML = `ฐาน 31 ธ.ค. 64 <b>(117,008.99 ฿)</b> + เงินส่งใหม่ <b>${formatMoney(totalContrib)} ฿</b>`;
+        if (costTitle) costTitle.textContent = 'ต้นทุนฐานรวม';
         if (valCost) valCost.textContent = formatMoney(activeCost);
 
         const color = activeProfit >= 0 ? '#4caf50' : '#f44336';
         const sign = activeProfit >= 0 ? '+' : '';
+        if (bannerBox) {
+          bannerBox.style.borderColor = activeProfit >= 0 ? 'rgba(76,175,80,0.35)' : 'rgba(244,67,54,0.35)';
+          bannerBox.style.background = activeProfit >= 0 ? 'rgba(76,175,80,0.06)' : 'rgba(244,67,54,0.06)';
+        }
         if (bannerVal) {
           bannerVal.textContent = `${sign}${formatMoney(activeProfit)} ฿`;
           bannerVal.style.color = color;
