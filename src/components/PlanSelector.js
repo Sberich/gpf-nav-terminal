@@ -1,18 +1,14 @@
 /**
  * PlanSelector Component - Watchlist Sidebar for GPF Investment Plans
- * Renders all 15 GPF investment plans vertically across 4 financial categories:
- * 1. แผนเชิงรุก (Active Allocation)
- * 2. ตลาดเงินและตราสารหนี้ (Fixed Income & Money Market)
- * 3. หุ้นและอสังหาริมทรัพย์ (Equities & Real Estate)
- * 4. แผนพิเศษและทางเลือก (Specialized & Alternative Plans)
+ * Renders all 15 GPF investment plans in a clean, compact, un-nested list:
  *
  * Each row displays:
- * - Color swatch dot
  * - Checkbox toggle for multi-series chart comparison
+ * - Color swatch dot
  * - Plan name & primary tag
- * - Latest NAV price in monospace/tabular numerals
- * - 1D daily percentage change pill (+ / -)
- * - Quick actions: "เลือกทั้งหมด", "ซ่อนทั้งหมด", and "เฉพาะ" (Solo view)
+ * - Latest NAV price in monospace/tabular numerals (inline)
+ * - 1D daily percentage change pill (+ / -) placed directly beside NAV
+ * - Quick actions: "เลือกทั้งหมด", "ซ่อนทั้งหมด"
  */
 
 export const PLAN_CATEGORIES = [
@@ -48,6 +44,24 @@ export const PLAN_CATEGORIES = [
   }
 ];
 
+export const ALL_PLANS = [
+  'แผนเชิงรุก 20',
+  'แผนเชิงรุก 35',
+  'แผนเชิงรุก 65',
+  'แผนเชิงรุก 75',
+  'แผนเงินฝากและตราสารหนี้ระยะสั้น',
+  'แผนตราสารหนี้',
+  'แผนตราสารหนี้ต่างประเทศ',
+  'แผนหุ้นไทย',
+  'แผนหุ้นต่างประเทศ',
+  'แผนกองทุนอสังหาริมทรัพย์ไทย',
+  'แผนทองคำ',
+  'แผนกองทุนรวมวายุภักษ์',
+  'แผนการลงทุนตามหลักชะรีอะฮ์',
+  'แผนลงทุนพื้นฐานทั่วไป',
+  'แผนเกษียณสบายใจ 2569'
+];
+
 export class PlanSelector {
   constructor(container, options = {}) {
     this.container = typeof container === 'string' ? document.querySelector(container) : container;
@@ -65,7 +79,7 @@ export class PlanSelector {
     this.activePlans = new Set(initial);
     this.activePlans.add(this.primaryPlan);
 
-    // Track collapsed categories
+    // Track collapsed categories (backward compatibility)
     this.collapsedCategories = new Set();
 
     this.render();
@@ -74,6 +88,29 @@ export class PlanSelector {
   setData(summaryData) {
     this.summaryData = summaryData;
     this.render();
+  }
+
+  setPrimaryPlan(planKey) {
+    if (!planKey) return;
+    this.primaryPlan = planKey;
+    this.activePlans.add(planKey);
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('gpf_primary_plan', planKey);
+      }
+    } catch {
+      // ignore
+    }
+    this.updateActiveStyles();
+  }
+
+  setActivePlans(plans) {
+    if (!Array.isArray(plans)) return;
+    this.activePlans = new Set(plans);
+    if (this.primaryPlan) {
+      this.activePlans.add(this.primaryPlan);
+    }
+    this.updateActiveStyles();
   }
 
   selectPlan(planKey) {
@@ -112,9 +149,7 @@ export class PlanSelector {
   }
 
   selectAll() {
-    PLAN_CATEGORIES.forEach(cat => {
-      cat.plans.forEach(name => this.activePlans.add(name));
-    });
+    ALL_PLANS.forEach(name => this.activePlans.add(name));
     this.dispatchChange(false);
     this.updateActiveStyles();
   }
@@ -209,63 +244,42 @@ export class PlanSelector {
 
     const plansData = this.summaryData?.plans || {};
 
-    let categoriesHtml = '';
-    for (const cat of PLAN_CATEGORIES) {
-      const isCollapsed = this.collapsedCategories.has(cat.id);
-      const chevron = isCollapsed ? '▶' : '▼';
+    let pillsHtml = '';
+    for (const planName of ALL_PLANS) {
+      const planInfo = plansData[planName] || {};
+      const color = planInfo.color || '#2196F3';
+      const isSelected = this.activePlans.has(planName);
+      const isPrimary = this.primaryPlan === planName;
+      
+      // Latest NAV price & 1D change
+      const navStr = planInfo.latestNav != null ? Number(planInfo.latestNav).toFixed(4) : '-';
+      const chgVal = planInfo.changePct;
+      const hasChg = chgVal != null && !isNaN(chgVal);
+      const chgIsUp = hasChg && chgVal >= 0;
+      const chgBadge = hasChg ? `${chgIsUp ? '+' : ''}${Number(chgVal).toFixed(2)}%` : '-';
+      const chgClass = !hasChg ? 'neutral' : (chgIsUp ? 'up' : 'down');
 
-      let pillsHtml = '';
-      for (const planName of cat.plans) {
-        const planInfo = plansData[planName] || {};
-        const color = planInfo.color || '#2196F3';
-        const isSelected = this.activePlans.has(planName);
-        const isPrimary = this.primaryPlan === planName;
-        
-        // Latest NAV price & 1D change
-        const navStr = planInfo.latestNav != null ? Number(planInfo.latestNav).toFixed(4) : '-';
-        const chgVal = planInfo.changePct;
-        const hasChg = chgVal != null && !isNaN(chgVal);
-        const chgIsUp = hasChg && chgVal >= 0;
-        const chgBadge = hasChg ? `${chgIsUp ? '+' : ''}${Number(chgVal).toFixed(2)}%` : '-';
-        const chgClass = !hasChg ? 'neutral' : (chgIsUp ? 'up' : 'down');
+      const catName = PLAN_CATEGORIES.find(c => c.plans.includes(planName))?.title || '';
 
-        pillsHtml += `
-          <div class="plan-pill ${isSelected ? 'is-selected' : ''} ${isPrimary ? 'is-primary' : ''}"
-               data-plan="${planName}"
-               style="--plan-color: ${color}">
-            <label class="plan-checkbox-wrapper" title="เปิด/ปิดการเปรียบเทียบในกราฟ">
-              <input type="checkbox" class="plan-checkbox" data-plan="${planName}" ${isSelected ? 'checked' : ''} />
-              <span class="custom-check" style="background-color: ${isSelected ? color : 'transparent'}; border-color: ${color}"></span>
-            </label>
-            <div class="plan-info" title="คลิกเพื่อเลือกแผนนี้เป็นแผนอ้างอิง">
-              <span class="plan-swatch" style="background-color: ${color}"></span>
-              <div class="plan-name-wrap">
-                <span class="plan-name">${planName}</span>
-                <span class="primary-tag" style="display: ${isPrimary ? 'inline-block' : 'none'}">หลัก</span>
-              </div>
+      pillsHtml += `
+        <div class="plan-pill ${isSelected ? 'is-selected' : ''} ${isPrimary ? 'is-primary' : ''}"
+             data-plan="${planName}"
+             data-category="${catName}"
+             style="--plan-color: ${color}">
+          <label class="plan-checkbox-wrapper" title="เปิด/ปิดการเปรียบเทียบในกราฟ">
+            <input type="checkbox" class="plan-checkbox" data-plan="${planName}" ${isSelected ? 'checked' : ''} />
+            <span class="custom-check" style="background-color: ${isSelected ? color : 'transparent'}; border-color: ${color}"></span>
+          </label>
+          <div class="plan-info" title="คลิกเพื่อเลือกแผนนี้เป็นแผนหลัก">
+            <span class="plan-swatch" style="background-color: ${color}"></span>
+            <div class="plan-name-wrap">
+              <span class="plan-name" title="${planName}">${planName}</span>
+              <span class="primary-tag" style="display: ${isPrimary ? 'inline-block' : 'none'}">หลัก</span>
             </div>
-            <div class="plan-price-col">
-              <span class="plan-nav-val">${navStr}</span>
-              <span class="plan-chg-pill ${chgClass}">${chgBadge}</span>
-            </div>
-            <button class="btn-only-this" data-only="${planName}" title="เลือกดูเฉพาะแผนนี้">เฉพาะ</button>
           </div>
-        `;
-      }
-
-      categoriesHtml += `
-        <div class="plan-category-group ${isCollapsed ? 'collapsed' : ''}" data-cat="${cat.id}">
-          <div class="plan-category-header" data-toggle-cat="${cat.id}">
-            <div class="cat-title-wrap">
-              <span class="cat-chevron">${chevron}</span>
-              <span class="cat-title">${cat.title}</span>
-            </div>
-            <span class="cat-count-badge">${cat.plans.length}</span>
-          </div>
-          <div class="plan-pills-container ${isCollapsed ? 'hidden' : ''}">
-            <div class="plan-pills">
-              ${pillsHtml}
-            </div>
+          <div class="plan-price-col">
+            <span class="plan-nav-val">${navStr}</span>
+            <span class="plan-chg-pill ${chgClass}">${chgBadge}</span>
           </div>
         </div>
       `;
@@ -275,14 +289,14 @@ export class PlanSelector {
       <div class="plan-selector watchlist-sidebar-card animate-fade-in">
         <div class="watchlist-header">
           <div class="watchlist-title-row">
-            <span class="watchlist-title">กระดานราคา (Watchlist)</span>
+            <span class="watchlist-title">กระดานราคา (WATCHLIST)</span>
             <span class="selected-count-badge">${this.activePlans.size}/15 แผน</span>
           </div>
           <div class="watchlist-hint">คลิกชื่อเพื่อเปลี่ยนแผนหลัก หรือติ๊กถูกเพื่อเทียบกราฟ</div>
         </div>
 
-        <div class="plan-categories-list watchlist-scroll-area">
-          ${categoriesHtml}
+        <div class="plan-categories-list watchlist-scroll-area plan-pills-list">
+          ${pillsHtml}
         </div>
 
         <div class="watchlist-footer">
@@ -312,12 +326,12 @@ export class PlanSelector {
       selectDefaultBtn.addEventListener('click', () => this.deselectAll());
     }
 
-    // Category accordion toggle
+    // Category accordion toggle (backward compatibility)
     const catHeaders = this.container.querySelectorAll('.plan-category-header');
     if (catHeaders && catHeaders.length) {
       catHeaders.forEach(hdr => {
         if (typeof hdr.addEventListener === 'function') {
-          hdr.addEventListener('click', (e) => {
+          hdr.addEventListener('click', () => {
             const catId = hdr.dataset?.toggleCat || hdr.getAttribute('data-toggle-cat');
             if (catId) this.toggleCategory(catId);
           });
@@ -379,4 +393,5 @@ export default {
   PlanSelector,
   renderPlanSelector,
   PLAN_CATEGORIES,
+  ALL_PLANS,
 };
