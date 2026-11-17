@@ -50,10 +50,14 @@ class ParityResult:
 def _compare_values(
     val1: Optional[float], val2: Optional[float], tolerance: float = 1e-4
 ) -> bool:
-    """Compare two float / None values within numerical tolerance."""
-    if val1 is None and val2 is None:
+    """Compare two float / None values within numerical tolerance.
+    Treats None, empty strings, and non-positive floats (<= 0.0) as unrecorded/None.
+    """
+    is_empty1 = val1 is None or (isinstance(val1, (int, float)) and val1 <= 0.0)
+    is_empty2 = val2 is None or (isinstance(val2, (int, float)) and val2 <= 0.0)
+    if is_empty1 and is_empty2:
         return True
-    if val1 is None or val2 is None:
+    if is_empty1 or is_empty2:
         return False
     try:
         f1 = float(val1)

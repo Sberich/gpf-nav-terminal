@@ -363,7 +363,7 @@ def generate_nav_summary(
 
 
 def downsample_unified_indices(
-    y_values: List[Optional[float]], threshold: int = 2000
+    y_values: List[Optional[float]], threshold: int = 5000
 ) -> List[int]:
     """LTTB (Largest Triangle Three Buckets) downsampler returning sampled indices.
 
@@ -492,7 +492,7 @@ def update_nav(
     history_path: str = DEFAULT_HISTORY_PATH,
     summary_path: str = DEFAULT_SUMMARY_PATH,
     chart_path: str = DEFAULT_CHART_PATH,
-    max_chart_points: int = 2000,
+    max_chart_points: int = 5000,
     force: bool = False,
 ) -> Dict:
     """Run full ingestion, analytics, and chart synchronization pipeline."""
@@ -502,6 +502,12 @@ def update_nav(
         with open(history_path, "r", encoding="utf-8") as f:
             try:
                 existing_records = json.load(f)
+                # Sanitize invalid / 0.0 values to None
+                for r in existing_records:
+                    if "plans" in r and isinstance(r["plans"], dict):
+                        for p, v in r["plans"].items():
+                            if v is not None and isinstance(v, (int, float)) and v <= 0.0:
+                                r["plans"][p] = None
             except Exception as e:
                 print(f"Warning: Could not parse existing history file: {e}", file=sys.stderr)
                 existing_records = []
@@ -615,7 +621,7 @@ def main():
     parser.add_argument("--summary-file", default=DEFAULT_SUMMARY_PATH, help="Path to nav_summary.json")
     parser.add_argument("--chart-file", default=DEFAULT_CHART_PATH, help="Path to nav_chart.json")
     parser.add_argument(
-        "--max-chart-points", type=int, default=2000, help="Max points for synchronized chart"
+        "--max-chart-points", type=int, default=5000, help="Max points for synchronized chart"
     )
     parser.add_argument("--force", action="store_true", help="Force recalculation and export")
     args = parser.parse_args()
