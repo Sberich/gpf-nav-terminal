@@ -23,6 +23,10 @@
   --terminal-sidebar-width: 280px;
 
   /* Additional helper tokens */
+  --primary: #388bfd;
+  --green: #0ecb81;
+  --red: #f6465d;
+  --warning: #f59e0b;
   --header-height: 56px;
   --radius-sm: 4px;
   --radius-md: 8px;
@@ -53,6 +57,10 @@
   --neon-green-bg: rgba(14, 159, 110, 0.1);
   --neon-red: #e02424;
   --neon-red-bg: rgba(224, 36, 36, 0.1);
+  --primary: #0969da;
+  --green: #0e9f6e;
+  --red: #e02424;
+  --warning: #d97706;
 
   /* Helper token overrides for light theme */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);

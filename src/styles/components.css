@@ -59,7 +59,7 @@
 }
 
 .stat-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -139,7 +139,7 @@
 }
 
 .stat-sub {
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--muted);
   margin-top: 3px;
@@ -175,7 +175,7 @@
   align-items: center;
   padding: 1px 4px;
   border-radius: 3px;
-  font-size: 9.5px;
+  font-size: 10.5px;
   font-weight: 700;
 }
 
@@ -257,7 +257,7 @@
 }
 
 .selected-count-badge {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 10px;
@@ -267,7 +267,7 @@
 }
 
 .watchlist-hint {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
 }
 
@@ -450,7 +450,7 @@
 
 .primary-tag {
   display: none;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--accent);
   background-color: rgba(56, 139, 253, 0.18);
@@ -473,7 +473,7 @@
 }
 
 .plan-nav-val {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
   color: var(--text);
   font-variant-numeric: tabular-nums;
@@ -481,7 +481,7 @@
 }
 
 .plan-chg-pill {
-  font-size: 9.5px;
+  font-size: 10.5px;
   font-weight: 700;
   padding: 1px 4px;
   border-radius: 3px;
@@ -520,6 +520,34 @@
 
 .plan-pill:hover .btn-only-this {
   opacity: 0.85;
+}
+
+@media (hover: none) or (max-width: 1024px) {
+  .btn-only-this {
+    opacity: 0.7;
+  }
+}
+
+.btn-secondary-action {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--terminal-border);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-secondary-action:hover {
+  background: var(--terminal-card-hover);
+  color: var(--text);
+  border-color: var(--terminal-border-light);
+}
+
+.text-bold {
+  font-weight: 700;
 }
 
 .btn-only-this:hover {

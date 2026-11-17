@@ -312,7 +312,7 @@ export class TradingViewChart {
     // 4. Add Price Pins (only in 'nav' mode)
     if (!isPct && pins && pins.length > 0) {
       for (const pin of pins) {
-        if (pin.plan === this.primaryPlan && pin.value > 0) {
+        if (pin && pin.value > 0 && (!pin.plan || pin.plan === this.primaryPlan)) {
           const pLine = this.primarySeries.createPriceLine({
             price: pin.value,
             color: primaryColor,

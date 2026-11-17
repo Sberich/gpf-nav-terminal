@@ -24,7 +24,7 @@ async function loadJson(primaryUrl, relativeFallback) {
     ];
     for (const u of urls) {
       try {
-        const res = await window.fetch(`${u}?t=${Date.now()}`);
+        const res = await window.fetch(u);
         if (res && res.ok) {
           return await res.json();
         }

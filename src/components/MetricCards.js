@@ -206,18 +206,22 @@ export class MetricCards {
     }
 
     // Price Zone badge logic
+    const isLowVol = plan.key?.includes('เงินฝาก') || plan.key?.includes('ตราสารหนี้ระยะสั้น') || plan.key?.includes('ตราสารหนี้') || plan.key?.includes('วายุภักษ์');
     let zoneBadgeClass = 'badge-neutral';
     let zoneSub = 'ตำแหน่งในกรอบปี';
-    if (zonePct != null) {
-      if (zonePct >= 80) {
-        zoneBadgeClass = 'badge-danger';
-        zoneSub = '🚨 โซนแพง ระวังจุดสูงสุด';
-      } else if (zonePct >= 40) {
+    if (isLowVol) {
+      zoneBadgeClass = 'badge-info';
+      zoneSub = '🛡️ มั่นคง / ผลตอบแทนต่อเนื่อง';
+    } else if (zonePct != null) {
+      if (zonePct >= 75) {
         zoneBadgeClass = 'badge-neutral';
-        zoneSub = 'โซนกลางๆ';
+        zoneSub = '📈 โซนราคาสูง (ใกล้จุดสูงสุด)';
+      } else if (zonePct >= 35) {
+        zoneBadgeClass = 'badge-neutral';
+        zoneSub = '⚖️ โซนราคากลางๆ';
       } else {
         zoneBadgeClass = 'badge-success';
-        zoneSub = '🛒 โซนถูก น่าสะสม';
+        zoneSub = '🛒 โซนราคาถูก (ใกล้ฐานต่ำสุด)';
       }
     }
 
@@ -286,8 +290,8 @@ export class MetricCards {
           <div class="stat-val text-truncate" title="${bestPlan?.name || '-'}">
             ${bestPlan?.name || '-'}
           </div>
-          <div class="stat-sub trend-up">
-            ${bestPlan?.changePct != null ? `+${Number(bestPlan.changePct).toFixed(2)}%` : '-'}
+          <div class="stat-sub ${bestPlan?.changePct != null && bestPlan.changePct >= 0 ? 'trend-up' : 'trend-down'}">
+            ${bestPlan?.changePct != null ? (bestPlan.changePct > 0 ? `+${Number(bestPlan.changePct).toFixed(2)}%` : `${Number(bestPlan.changePct).toFixed(2)}%`) : '-'}
           </div>
         </div>
 
@@ -309,7 +313,7 @@ export class MetricCards {
             ${formatPct(ytdVal)}
           </div>
           <div class="stat-sub ${ytdBadgeClass}">
-            ${ytdRank ? `อันดับ ${ytdRank}/${totalRanked} ใน 15 แผน` : (hasYtd ? ytdBadgeText : '-')}
+            ${ytdRank ? `อันดับ ${ytdRank} จาก ${totalRanked} แผน` : (hasYtd ? ytdBadgeText : '-')}
           </div>
         </div>
 

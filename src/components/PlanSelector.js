@@ -87,7 +87,7 @@ export class PlanSelector {
     } catch {
       // ignore
     }
-    this.dispatchChange();
+    this.dispatchChange(true);
     this.updateActiveStyles();
   }
 
@@ -103,9 +103,11 @@ export class PlanSelector {
       }
     } else {
       this.activePlans.add(planKey);
-      this.primaryPlan = planKey;
+      if (!this.primaryPlan) {
+        this.primaryPlan = planKey;
+      }
     }
-    this.dispatchChange();
+    this.dispatchChange(false);
     this.updateActiveStyles();
   }
 
@@ -113,13 +115,13 @@ export class PlanSelector {
     PLAN_CATEGORIES.forEach(cat => {
       cat.plans.forEach(name => this.activePlans.add(name));
     });
-    this.dispatchChange();
+    this.dispatchChange(false);
     this.updateActiveStyles();
   }
 
   deselectAll() {
     this.activePlans = new Set([this.primaryPlan]);
-    this.dispatchChange();
+    this.dispatchChange(false);
     this.updateActiveStyles();
   }
 
@@ -127,7 +129,7 @@ export class PlanSelector {
     if (!planKey) return;
     this.activePlans = new Set([planKey]);
     this.primaryPlan = planKey;
-    this.dispatchChange();
+    this.dispatchChange(true);
     this.updateActiveStyles();
   }
 
@@ -140,10 +142,11 @@ export class PlanSelector {
     this.render();
   }
 
-  dispatchChange() {
+  dispatchChange(isPrimaryChange = false) {
     const detail = {
       activePlans: Array.from(this.activePlans),
-      primaryPlan: this.primaryPlan
+      primaryPlan: this.primaryPlan,
+      isPrimaryChange
     };
     const event = new CustomEvent('plan-change', {
       detail,

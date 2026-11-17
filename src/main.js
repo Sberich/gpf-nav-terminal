@@ -231,10 +231,33 @@ async function initComponents() {
 
       exportModalInstance = renderExportModal(modalsContainer);
 
+      const cachedVisitVersion = (typeof localStorage !== 'undefined' && localStorage.getItem('gpf_visit_version')) || 'v1.1278';
+
       devModalInstance = renderDevModal(modalsContainer, {
-        version: 'v1.1271',
+        version: cachedVisitVersion,
         author: 'KⓇU M00 ¥EO'
       });
+
+      // Background non-blocking sync: increment & fetch live visit counter from GAS
+      if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
+        const gasUrl = 'https://script.google.com/macros/s/AKfycbzlJ-0h4z96CmQx2Ii3yN3RYdO-V8uh2PpLc9VEnfPfYHZN__oV-Rzy7uWseLT52Whw/exec?action=history';
+        window.fetch(gasUrl)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.visitCount) {
+              const v = Math.floor(data.visitCount / 10000) + 1;
+              const rem = (data.visitCount % 10000).toString().padStart(4, '0');
+              const verStr = `v${v}.${rem}`;
+              if (devModalInstance && typeof devModalInstance.setVersion === 'function') {
+                devModalInstance.setVersion(verStr);
+              }
+              localStorage.setItem('gpf_visit_version', verStr);
+            }
+          })
+          .catch(err => {
+            console.log('[Visit Counter] Offline or background sync note:', err.message);
+          });
+      }
     }
 
     // Connect plan-change event listener to update MetricCards and ChartView
@@ -250,8 +273,8 @@ async function initComponents() {
         chartViewInstance.updateActivePlans(activePlans);
       }
 
-      // On mobile / iOS, if user tapped a plan in sidebar, automatically switch back to the chart tab
-      if (typeof window !== 'undefined' && window.innerWidth <= 1024) {
+      // On mobile / iOS, ONLY switch back to chart tab if user explicitly tapped to change the primary plan
+      if (event.detail?.isPrimaryChange && typeof window !== 'undefined' && window.innerWidth <= 1024) {
         const stageBtn = document.querySelector('.ios-tab-btn[data-tab="stage"]');
         if (stageBtn && !stageBtn.classList.contains('is-active')) {
           stageBtn.click();
