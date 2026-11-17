@@ -846,11 +846,6 @@ export class ChartView {
             <button class="chart-action-btn ${this.chartEngine === 'tradingview' ? 'is-active' : ''}" id="btn-toggle-engine" title="สลับการแสดงผลระหว่างกราฟ ApexCharts และ TradingView">
               <span>TradingView</span>
             </button>
-
-            <!-- Chart Auto-Fit Height Toggle -->
-            <button class="chart-action-btn ${this.isAutoFit ? 'is-active' : ''}" id="btn-chart-autofit" title="ขยายกราฟให้พอดีความสูงหน้าจอ (Auto-Fit) หรือคืนค่าขนาดเดิม">
-              <span>${this.isAutoFit ? '↕ ขนาดมาตรฐาน' : '⛶ พอดีหน้าจอ'}</span>
-            </button>
           </div>
         </div>
 
@@ -863,11 +858,6 @@ export class ChartView {
 
         <div class="chart-render-area" id="apexcharts-area" style="display: ${this.chartEngine === 'apex' ? 'block' : 'none'};"></div>
         <div class="chart-render-area tv-chart-area" id="tradingview-area" style="display: ${this.chartEngine === 'tradingview' ? 'block' : 'none'};"></div>
-
-        <!-- Draggable Resizer Bar -->
-        <div class="chart-resizer" id="chart-resizer" title="คลิกลากขึ้นลงเพื่อปรับความสูงกราฟ">
-          <div class="resizer-handle"></div>
-        </div>
       </div>
     `;
 
@@ -1127,7 +1117,11 @@ export class ChartView {
     if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
       window.addEventListener('resize', () => {
         if (this.chart && typeof this.chart.updateOptions === 'function') {
-          this.chart.updateOptions({ annotations: this.getAnnotations() }, false, false);
+          const newH = this.calculateChartHeight();
+          this.chart.updateOptions({
+            chart: { height: newH },
+            annotations: this.getAnnotations()
+          }, false, false);
         }
       });
     }
@@ -1214,10 +1208,15 @@ export class ChartView {
   }
 
   calculateChartHeight() {
-    if (this.isAutoFit && typeof window !== 'undefined' && window.innerHeight) {
+    if (typeof window !== 'undefined' && window.innerHeight) {
       if (window.innerWidth > 1024) {
-        const remaining = window.innerHeight - 230;
-        return Math.max(500, remaining);
+        // True 100vh docked terminal height:
+        // Measure parent stage and hud to compute exact remaining height for chart canvas
+        const hudEl = document.querySelector('#metric-cards-container');
+        const hudH = hudEl && hudEl.offsetHeight > 0 ? hudEl.offsetHeight : 70;
+        // Total screen height minus header (52px), stage padding (22px), hud height, gaps and card header/padding (~76px)
+        const available = window.innerHeight - 52 - 22 - hudH - 8 - 76;
+        return Math.max(450, available);
       }
     }
     return this.chartHeight || 450;

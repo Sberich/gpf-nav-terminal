@@ -257,114 +257,122 @@ export class MetricCards {
     const atlNav = formatNav(plan.atl?.nav);
 
     this.container.innerHTML = `
-      <div class="metric-cards-grid terminal-ticker-bar animate-fade-in">
-        <!-- 1. ข้อมูลล่าสุด -->
-        <div class="metric-card ticker-card card-date">
-          <div class="stat-label">ข้อมูลล่าสุด</div>
-          <div class="stat-val date-val">${thaiDate}</div>
-          <div class="stat-sub">วันทำการล่าสุด</div>
-        </div>
-
-        <!-- 2. แผนอ้างอิง + NAV ล่าสุด -->
-        <div class="metric-card ticker-card card-latest-nav">
-          <div class="stat-label">
-            <span class="plan-color-dot" style="background-color: ${plan.color}"></span>
-            <span class="plan-key-text">${plan.key} (อ้างอิง)</span>
-          </div>
-          <div class="stat-val nav-value ${trendClass}">
-            <span class="nav-number">${formatNav(plan.latestNav)}</span>
-            <span class="nav-unit">฿</span>
-          </div>
-          <div class="stat-sub ${trendClass}">
-            ${arrow} ${formatChange(plan.change)} (${formatPct(plan.changePct)})
-          </div>
-        </div>
-
-        <!-- 3. ดีสุดวันนี้ -->
-        <div class="metric-card ticker-card card-best">
-          <div class="stat-label">ดีสุดวันนี้</div>
-          <div class="stat-val text-truncate" title="${bestPlan?.name || '-'}">
-            ${bestPlan?.name || '-'}
-          </div>
-          <div class="stat-sub trend-up">
-            ${bestPlan?.changePct != null ? `+${Number(bestPlan.changePct).toFixed(2)}%` : '-'}
+      <div class="terminal-hud-container terminal-ticker-bar animate-fade-in">
+        <!-- โซน 1: Hero เด่นสุด (แผนที่เลือก + ราคา NAV ล่าสุด + % เปลี่ยนแปลง + วันที่) -->
+        <div class="hud-zone hud-zone-hero">
+          <div class="metric-card ticker-card card-latest-nav hero-card">
+            <div class="hero-top-row">
+              <div class="stat-label">
+                <span class="plan-color-dot" style="background-color: ${plan.color}"></span>
+                <span class="plan-key-text">${plan.key} (อ้างอิง)</span>
+              </div>
+              <div class="stat-date-badge card-date" title="วันทำการล่าสุด">
+                <span class="date-val">${thaiDate}</span>
+              </div>
+            </div>
+            <div class="hero-price-row">
+              <div class="stat-val nav-value ${trendClass}">
+                <span class="nav-number">${formatNav(plan.latestNav)}</span>
+                <span class="nav-unit">฿</span>
+              </div>
+              <div class="stat-sub hero-change ${trendClass}">
+                ${arrow} ${formatChange(plan.change)} (${formatPct(plan.changePct)})
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- 4. แย่สุดวันนี้ -->
-        <div class="metric-card ticker-card card-worst">
-          <div class="stat-label">แย่สุดวันนี้</div>
-          <div class="stat-val text-truncate" title="${worstPlan?.name || '-'}">
-            ${worstPlan?.name || '-'}
+        <!-- โซน 2: สถิติเทคนิค & แนวโน้ม (YTD, High/Low, ย่อตัว, โซนราคา, แนวโน้ม) -->
+        <div class="hud-zone hud-zone-metrics">
+          <!-- 5. YTD (ต้นปี) & อันดับ -->
+          <div class="metric-card ticker-card card-ytd">
+            <div class="stat-label">YTD (ผลตอบแทนปีนี้)</div>
+            <div class="stat-val ${ytdTrendClass}">
+              ${formatPct(ytdVal)}
+            </div>
+            <div class="stat-sub ${ytdBadgeClass}">
+              ${ytdRank ? `อันดับ ${ytdRank}/${totalRanked} ใน 15 แผน` : (hasYtd ? ytdBadgeText : '-')}
+            </div>
           </div>
-          <div class="stat-sub trend-down">
-            ${worstPlan?.changePct != null ? `${Number(worstPlan.changePct).toFixed(2)}%` : '-'}
+
+          <!-- 6. High / Low ช่วงปี -->
+          <div class="metric-card ticker-card card-range">
+            <div class="stat-label">High / Low (ช่วงปี)</div>
+            <div class="stat-val stat-val-dual">
+              <span class="range-high">▲ ${formatNav(highVal)}</span>
+              <span class="range-low">▼ ${formatNav(lowVal)}</span>
+            </div>
+            <div class="stat-sub">สถิติ 1 ปีย้อนหลัง</div>
+          </div>
+
+          <!-- 7. 📉 ย่อตัวจากจุดสูงสุด -->
+          <div class="metric-card ticker-card card-drawdown">
+            <div class="stat-label">📉 ย่อตัวจากจุดสูงสุด</div>
+            <div class="stat-val ${drawdownPct != null && drawdownPct >= 0 ? 'trend-up' : 'trend-down'}">
+              ${drawdownPct != null ? `${drawdownPct.toFixed(2)}%` : '-'}
+            </div>
+            <div class="stat-sub ${ddBadgeClass}">
+              ${ddSub}
+            </div>
+          </div>
+
+          <!-- 8. 🎯 ตำแหน่งราคา -->
+          <div class="metric-card ticker-card card-zone">
+            <div class="stat-label">🎯 ตำแหน่งราคา</div>
+            <div class="stat-val">
+              ${zonePct != null ? `${zonePct.toFixed(0)}%` : '-'}
+            </div>
+            <div class="stat-sub ${zoneBadgeClass}">
+              ${zoneSub}
+            </div>
+          </div>
+
+          <!-- 9. 🚀 แนวโน้มระยะสั้น (SMA20) -->
+          <div class="metric-card ticker-card card-trend">
+            <div class="stat-label">🚀 แนวโน้มระยะสั้น</div>
+            <div class="stat-val">
+              ${smaTitle}
+            </div>
+            <div class="stat-sub ${smaBadgeClass}">
+              ${smaSub}
+            </div>
           </div>
         </div>
 
-        <!-- 5. YTD (ต้นปี) & อันดับ -->
-        <div class="metric-card ticker-card card-ytd">
-          <div class="stat-label">YTD (ผลตอบแทนปีนี้)</div>
-          <div class="stat-val ${ytdTrendClass}">
-            ${formatPct(ytdVal)}
+        <!-- โซน 3: ภาพรวมตลาด & ระยะยาว (ดีสุด, แย่สุด, CAGR & ATH) -->
+        <div class="hud-zone hud-zone-context">
+          <!-- 3. ดีสุดวันนี้ -->
+          <div class="metric-card ticker-card card-best">
+            <div class="stat-label">ดีสุดวันนี้</div>
+            <div class="stat-val text-truncate" title="${bestPlan?.name || '-'}">
+              ${bestPlan?.name || '-'}
+            </div>
+            <div class="stat-sub trend-up">
+              ${bestPlan?.changePct != null ? `+${Number(bestPlan.changePct).toFixed(2)}%` : '-'}
+            </div>
           </div>
-          <div class="stat-sub ${ytdBadgeClass}">
-            ${ytdRank ? `อันดับ ${ytdRank}/${totalRanked} ใน 15 แผน` : (hasYtd ? ytdBadgeText : '-')}
-          </div>
-        </div>
 
-        <!-- 6. High / Low ช่วงปี -->
-        <div class="metric-card ticker-card card-range">
-          <div class="stat-label">High / Low (ช่วงปี)</div>
-          <div class="stat-val stat-val-dual">
-            <span class="range-high">▲ ${formatNav(highVal)}</span>
-            <span class="range-low">▼ ${formatNav(lowVal)}</span>
+          <!-- 4. แย่สุดวันนี้ -->
+          <div class="metric-card ticker-card card-worst">
+            <div class="stat-label">แย่สุดวันนี้</div>
+            <div class="stat-val text-truncate" title="${worstPlan?.name || '-'}">
+              ${worstPlan?.name || '-'}
+            </div>
+            <div class="stat-sub trend-down">
+              ${worstPlan?.changePct != null ? `${Number(worstPlan.changePct).toFixed(2)}%` : '-'}
+            </div>
           </div>
-          <div class="stat-sub">สถิติ 1 ปีย้อนหลัง</div>
-        </div>
 
-        <!-- 7. 📉 ย่อตัวจากจุดสูงสุด -->
-        <div class="metric-card ticker-card card-drawdown">
-          <div class="stat-label">📉 ย่อตัวจากจุดสูงสุด</div>
-          <div class="stat-val ${drawdownPct != null && drawdownPct >= 0 ? 'trend-up' : 'trend-down'}">
-            ${drawdownPct != null ? `${drawdownPct.toFixed(2)}%` : '-'}
-          </div>
-          <div class="stat-sub ${ddBadgeClass}">
-            ${ddSub}
-          </div>
-        </div>
-
-        <!-- 8. 🎯 ตำแหน่งราคา -->
-        <div class="metric-card ticker-card card-zone">
-          <div class="stat-label">🎯 ตำแหน่งราคา</div>
-          <div class="stat-val">
-            ${zonePct != null ? `${zonePct.toFixed(0)}%` : '-'}
-          </div>
-          <div class="stat-sub ${zoneBadgeClass}">
-            ${zoneSub}
-          </div>
-        </div>
-
-        <!-- 9. 🚀 แนวโน้มระยะสั้น (SMA20) -->
-        <div class="metric-card ticker-card card-trend">
-          <div class="stat-label">🚀 แนวโน้มระยะสั้น</div>
-          <div class="stat-val">
-            ${smaTitle}
-          </div>
-          <div class="stat-sub ${smaBadgeClass}">
-            ${smaSub}
-          </div>
-        </div>
-
-        <!-- 10. ผลตอบแทนเฉลี่ยต่อปี (CAGR) & ATH -->
-        <div class="metric-card ticker-card card-cagr-ath">
-          <div class="stat-label">เฉลี่ยต่อปี (CAGR) & ATH</div>
-          <div class="stat-val stat-val-dual">
-            <span title="CAGR 3 ปี">3Y: ${cagr3Y != null ? formatPct(cagr3Y) : '-'}</span>
-            <span title="CAGR 5 ปี">5Y: ${cagr5Y != null ? formatPct(cagr5Y) : '-'}</span>
-          </div>
-          <div class="stat-sub">
-            ATH สูงสุด: ${athNav} ฿
+          <!-- 10. ผลตอบแทนเฉลี่ยต่อปี (CAGR) & ATH -->
+          <div class="metric-card ticker-card card-cagr-ath">
+            <div class="stat-label">เฉลี่ยต่อปี (CAGR) & ATH</div>
+            <div class="stat-val stat-val-dual">
+              <span title="CAGR 3 ปี">3Y: ${cagr3Y != null ? formatPct(cagr3Y) : '-'}</span>
+              <span title="CAGR 5 ปี">5Y: ${cagr5Y != null ? formatPct(cagr5Y) : '-'}</span>
+            </div>
+            <div class="stat-sub">
+              ATH สูงสุด: ${athNav} ฿
+            </div>
           </div>
         </div>
       </div>
