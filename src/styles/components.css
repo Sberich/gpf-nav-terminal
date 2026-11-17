@@ -12,7 +12,7 @@
 .terminal-ticker-bar {
   display: grid;
   grid-template-columns: repeat(10, minmax(0, 1fr));
-  gap: 6px;
+  gap: 5px;
   width: 100%;
 }
 
@@ -37,14 +37,67 @@
   background-color: var(--terminal-card);
   border: 1px solid var(--terminal-border);
   border-radius: var(--radius-sm);
-  padding: 7px 9px;
+  padding: 5px 8px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 58px;
+  min-height: 52px;
   transition: border-color 0.15s ease, background-color 0.15s ease;
   overflow: hidden;
   position: relative;
+}
+
+.card-chart-mode {
+  border-color: rgba(56, 139, 253, 0.35);
+  background: linear-gradient(135deg, rgba(56, 139, 253, 0.08) 0%, rgba(13, 17, 23, 0.95) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 6px;
+}
+
+.hud-mode-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+}
+
+.hud-mode-btn {
+  width: 100%;
+  flex: 1;
+  padding: 3px 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-family: var(--font);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--terminal-border);
+  background: var(--terminal-card-hover);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.hud-mode-btn:hover:not(.is-active) {
+  color: var(--text);
+  border-color: var(--terminal-border-light);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.hud-mode-btn.is-active {
+  background: rgba(56, 139, 253, 0.22);
+  color: #58a6ff;
+  border-color: #388bfd;
+  box-shadow: 0 0 8px rgba(56, 139, 253, 0.35);
 }
 
 .card-latest-nav {
@@ -592,6 +645,43 @@
   padding: 8px 10px;
   border-top: 1px solid var(--terminal-border);
   background: var(--terminal-card);
+  flex-shrink: 0;
+}
+
+.watchlist-action-tools {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.btn-sidebar-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--terminal-card-hover);
+  border: 1px solid var(--terminal-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.btn-sidebar-tool:hover {
+  border-color: #388bfd;
+  color: #58a6ff;
+  background: rgba(56, 139, 253, 0.12);
+  box-shadow: 0 0 8px rgba(56, 139, 253, 0.3);
+}
+
+.btn-sidebar-tool svg {
   flex-shrink: 0;
 }
 

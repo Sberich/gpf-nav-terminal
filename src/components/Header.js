@@ -71,35 +71,23 @@ export function renderHeader(container) {
         <div class="header-brand">
           <div class="logo-badge" title="กองทุนบำเหน็จบำนาญข้าราชการ">GPF</div>
           <div class="title-group">
-            <h1 class="logo-title">GPF NAV Terminal</h1>
-            <div class="logo-sub-row">
-              <span class="logo-sub">กระดานเทรดกองทุน กบข.</span>
+            <div class="logo-title-row">
+              <h1 class="logo-title">GPF NAV</h1>
               <span class="live-badge" id="btn-open-terminal-status" title="คลิกเพื่อดูสถานะระบบและข้อมูล NAV ล่าสุด">
                 <span class="live-dot"></span>
                 <span>TERMINAL</span>
               </span>
             </div>
-          </div>
-        </div>
-
-        <div class="header-center-info">
-          <div class="header-update-badge" id="header-update-badge" title="วันทำการล่าสุดที่มีการสรุปข้อมูล NAV">
-            <span class="update-pulse-dot"></span>
-            <span id="header-update-text">อัปเดต: วันทำการล่าสุด</span>
+            <div class="logo-sub-row">
+              <div class="header-update-badge" id="header-update-badge" title="วันทำการล่าสุดที่มีการสรุปข้อมูล NAV">
+                <span class="update-pulse-dot"></span>
+                <span id="header-update-text">อัปเดต: วันทำการล่าสุด</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="header-actions">
-          <button id="btn-open-whatif" class="btn-action" title="จำลองผลตอบแทนเปรียบเทียบ (What-If)">
-            ${WHATIF_ICON}
-            <span class="btn-text">จำลองผลตอบแทน</span>
-          </button>
-
-          <button id="btn-open-pins" class="btn-action" title="ปักหมุดระดับราคาเป้าหมาย">
-            ${PIN_ICON}
-            <span class="btn-text">ปักหมุดราคา</span>
-          </button>
-
           <button id="btn-export-modal" class="btn-action secret-export-btn" style="display: none;" title="ดาวน์โหลดข้อมูล Excel / CSV">
             ${DOWNLOAD_ICON}
             <span class="btn-text">ดาวน์โหลดข้อมูล</span>
@@ -178,26 +166,6 @@ export function renderHeader(container) {
           document.dispatchEvent(exportEvent);
         }
       }
-    });
-  }
-
-  // Setup What-If Modal Button Listener
-  const whatIfBtn = document.getElementById('btn-open-whatif') || container.querySelector?.('#btn-open-whatif');
-  if (whatIfBtn) {
-    whatIfBtn.addEventListener('click', () => {
-      const whatIfEvent = new CustomEvent('open-whatif-modal', { bubbles: true });
-      document.dispatchEvent(whatIfEvent);
-      window.dispatchEvent(whatIfEvent);
-    });
-  }
-
-  // Setup Pin Modal Button Listener
-  const pinBtn = document.getElementById('btn-open-pins') || container.querySelector?.('#btn-open-pins');
-  if (pinBtn) {
-    pinBtn.addEventListener('click', () => {
-      const pinEvent = new CustomEvent('open-pin-modal', { bubbles: true });
-      document.dispatchEvent(pinEvent);
-      window.dispatchEvent(pinEvent);
     });
   }
 

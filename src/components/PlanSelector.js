@@ -62,6 +62,28 @@ export const ALL_PLANS = [
   'แผนเกษียณสบายใจ 2569'
 ];
 
+const WHATIF_ICON = `
+<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="4" y="2" width="16" height="20" rx="2"></rect>
+  <line x1="8" y1="6" x2="16" y2="6"></line>
+  <line x1="16" y1="14" x2="16" y2="18"></line>
+  <path d="M16 10h.01"></path>
+  <path d="M12 10h.01"></path>
+  <path d="M8 10h.01"></path>
+  <path d="M12 14h.01"></path>
+  <path d="M8 14h.01"></path>
+  <path d="M12 18h.01"></path>
+  <path d="M8 18h.01"></path>
+</svg>
+`;
+
+const PIN_ICON = `
+<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <line x1="12" y1="17" x2="12" y2="22"></line>
+  <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path>
+</svg>
+`;
+
 export class PlanSelector {
   constructor(container, options = {}) {
     this.container = typeof container === 'string' ? document.querySelector(container) : container;
@@ -300,6 +322,16 @@ export class PlanSelector {
         </div>
 
         <div class="watchlist-footer">
+          <div class="watchlist-action-tools">
+            <button id="btn-open-whatif" class="btn-sidebar-tool" title="จำลองผลตอบแทนเปรียบเทียบ (What-If)">
+              ${WHATIF_ICON}
+              <span>จำลองผลตอบแทน</span>
+            </button>
+            <button id="btn-open-pins" class="btn-sidebar-tool" title="ปักหมุดระดับราคาเป้าหมาย">
+              ${PIN_ICON}
+              <span>ปักหมุดราคา</span>
+            </button>
+          </div>
           <div class="selector-quick-actions">
             <button id="btn-select-all" class="btn-quick-action" title="เลือกแสดงผลทุกแผน">เลือกทั้งหมด</button>
             <button id="btn-select-default" class="btn-quick-action" title="ซ่อนแผนอื่น เหลือเฉพาะแผนหลัก">ซ่อนทั้งหมด</button>
@@ -313,6 +345,26 @@ export class PlanSelector {
 
   bindEvents() {
     if (!this.container || !this.container.querySelectorAll) return;
+
+    // Sidebar action tool: What-If Modal
+    const whatIfBtn = this.container.querySelector ? this.container.querySelector('#btn-open-whatif') : null;
+    if (whatIfBtn && typeof whatIfBtn.addEventListener === 'function') {
+      whatIfBtn.addEventListener('click', () => {
+        const whatIfEvent = new CustomEvent('open-whatif-modal', { bubbles: true });
+        document.dispatchEvent(whatIfEvent);
+        if (typeof window !== 'undefined' && window.dispatchEvent) window.dispatchEvent(whatIfEvent);
+      });
+    }
+
+    // Sidebar action tool: Pin Modal
+    const pinBtn = this.container.querySelector ? this.container.querySelector('#btn-open-pins') : null;
+    if (pinBtn && typeof pinBtn.addEventListener === 'function') {
+      pinBtn.addEventListener('click', () => {
+        const pinEvent = new CustomEvent('open-pin-modal', { bubbles: true });
+        document.dispatchEvent(pinEvent);
+        if (typeof window !== 'undefined' && window.dispatchEvent) window.dispatchEvent(pinEvent);
+      });
+    }
 
     // Quick action: Select All
     const selectAllBtn = this.container.querySelector ? this.container.querySelector('#btn-select-all') : null;

@@ -805,6 +805,18 @@ export class ChartView {
       this.renderTradingViewChart();
     }
     this.updateMacdSignalBanner();
+    this._initModeListener();
+  }
+
+  _initModeListener() {
+    if (typeof document !== 'undefined' && !this._hasModeListener) {
+      this._hasModeListener = true;
+      document.addEventListener('chart-mode-change', (e) => {
+        if (e.detail?.mode && e.detail.mode !== this.currentMode) {
+          this.setMode(e.detail.mode);
+        }
+      });
+    }
   }
 
   /**
@@ -821,17 +833,9 @@ export class ChartView {
     this.container.innerHTML = `
       <div class="chart-wrapper trading-chart-card">
         <div class="chart-header">
-          <div class="chart-title-area">
-            <h3 class="chart-title">เปรียบเทียบมูลค่าหน่วยลงทุน (NAV)</h3>
-            <span class="chart-subtitle">แสดงข้อมูลย้อนหลังตามช่วงเวลาและเปรียบเทียบผลตอบแทน</span>
-          </div>
-          <div class="chart-toolbar">
-            <!-- Mode Toggle: NAV จริง vs % เปลี่ยนแปลง -->
-            <div class="chart-mode-group" role="group" aria-label="โหมดการแสดงผล">
-              <button class="mode-btn ${this.currentMode === 'nav' ? 'is-active' : ''}" data-mode="nav" title="แสดงมูลค่าหน่วยลงทุนจริง (บาท)">NAV จริง</button>
-              <button class="mode-btn ${this.currentMode === 'pct' ? 'is-active' : ''}" data-mode="pct" title="เปรียบเทียบผลตอบแทนแบบ % (Base 0% จากวันแรกของช่วงที่เลือก)">% เปลี่ยนแปลง</button>
-            </div>
+          <div class="macd-signal-banner" id="macd-signal-banner" style="display: ${this.showSignalOverlay ? 'flex' : 'none'};"></div>
 
+          <div class="chart-toolbar">
             <!-- Timeframe Group -->
             <div class="timeframe-group" role="group" aria-label="ช่วงเวลาแสดงผล">
               ${btnsHtml}
@@ -853,8 +857,6 @@ export class ChartView {
             </button>
           </div>
         </div>
-
-        <div class="macd-signal-banner" id="macd-signal-banner" style="display: ${this.showSignalOverlay ? 'flex' : 'none'};"></div>
 
         <div class="normalize-banner" id="normalize-banner" style="display: ${this.currentMode === 'pct' ? 'flex' : 'none'};">
           <span class="banner-icon">📊</span>
@@ -1497,9 +1499,12 @@ export class ChartView {
 
     if (analysis.isLowVol) {
       bannerEl.innerHTML = `
-        <div class="signal-tag tag-low-vol">🛡️ ความผันผวนต่ำ</div>
-        <span class="signal-desc"><strong>${targetPlan}:</strong> แผนความเสี่ยงต่ำมาก การเติบโตสะสมคงที่ (RSI/MACD ไม่เหมาะสมกับแผนนี้)</span>
-        <span class="signal-meta">Vol: ${(analysis.volatility * 100).toFixed(2)}%</span>
+        <div class="signal-tag tag-low-vol">🛡️ มั่นคง</div>
+        <div class="signal-metrics-row">
+          <span>ความผันผวนต่ำ</span>
+          <span class="signal-sep">·</span>
+          <span>Vol: ${(analysis.volatility * 100).toFixed(2)}%</span>
+        </div>
       `;
       return;
     }
@@ -1507,7 +1512,9 @@ export class ChartView {
     if (analysis.isUnreliable) {
       bannerEl.innerHTML = `
         <div class="signal-tag tag-neutral">⏳ ประวัติน้อย</div>
-        <span class="signal-desc"><strong>${targetPlan}:</strong> ต้องการข้อมูลอย่างน้อย 60 วันทำการเพื่อวิเคราะห์โมเมนตัม</span>
+        <div class="signal-metrics-row">
+          <span>ต้องการ 60 วันทำการ</span>
+        </div>
       `;
       return;
     }
@@ -1517,21 +1524,21 @@ export class ChartView {
     let crossDetail = '';
     if (lastCross) {
       const isGolden = lastCross.type === 'golden';
-      crossDetail = `· <span style="opacity: 0.85">จุดตัดล่าสุด: ${isGolden ? 'Golden Cross' : 'Dead Cross'} (${lastCross.date})</span>`;
+      const parts = lastCross.date?.split('-') || [];
+      const dStr = parts.length === 3 ? `${parseInt(parts[2], 10)} ${THAI_MONTHS_SHORT[parseInt(parts[1], 10) - 1] || parts[1]}` : lastCross.date;
+      crossDetail = `${isGolden ? 'Golden Cross' : 'Dead Cross'} (${dStr})`;
     }
 
     bannerEl.innerHTML = `
-      <div class="signal-tag ${isBullish ? 'tag-buy' : 'tag-sell'}">
-        ${isBullish ? '🟢 สัญญาณซื้อ / ขาขึ้น (จังหวะเข้าสะสม)' : '🔴 สัญญาณขาย / ขาลง (จังหวะชะลอ / พักเงิน)'}
+      <div class="signal-tag ${isBullish ? 'tag-buy' : 'tag-sell'}" title="${isBullish ? 'จังหวะเข้าสะสม (MACD เหนือ Signal)' : 'จังหวะชะลอ/พักเงิน (MACD ต่ำกว่า Signal)'}">
+        ${isBullish ? '🟢 ซื้อ (สะสม)' : '🔴 ขาย (พักเงิน)'}
       </div>
-      <span class="signal-desc">
-        <strong>${targetPlan}:</strong> ${isBullish ? 'โมเมนตัมกำลังเป็นบวก (MACD เหนือ Signal)' : 'โมเมนตัมชะลอตัว/พักฐาน (MACD ต่ำกว่า Signal)'}
-        ${crossDetail}
-        <span class="signal-legend-hint">· จุดกราฟ: <strong style="color:#10B981">● ซื้อ</strong> / <strong style="color:#EF4444">● ขาย</strong></span>
-      </span>
-      <span class="signal-meta">
-        Hist: <strong>${analysis.currentHist >= 0 ? '+' : ''}${analysis.currentHist.toFixed(4)}</strong> · RSI: <strong>${analysis.rsi.toFixed(1)}</strong>
-      </span>
+      <div class="signal-metrics-row">
+        ${crossDetail ? `<span class="signal-cross">${crossDetail}</span><span class="signal-sep">·</span>` : ''}
+        <span class="signal-hist">Hist: <strong>${analysis.currentHist >= 0 ? '+' : ''}${analysis.currentHist.toFixed(4)}</strong></span>
+        <span class="signal-sep">·</span>
+        <span class="signal-rsi">RSI: <strong>${analysis.rsi.toFixed(1)}</strong></span>
+      </div>
     `;
   }
 

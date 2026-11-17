@@ -9,7 +9,7 @@
   background: var(--terminal-card);
   border: 1px solid var(--terminal-border);
   border-radius: var(--radius-sm);
-  padding: 12px 14px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -21,36 +21,38 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 10px;
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin-bottom: 6px;
+  min-height: 28px;
+}
+
+@media (max-width: 1024px) {
+  .chart-header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
 }
 
 .chart-title-area {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: none;
 }
 
 .chart-title {
-  font-size: 13.5px;
-  font-weight: 700;
-  color: var(--text);
-  margin: 0;
-  line-height: 1.3;
+  display: none;
 }
 
 .chart-subtitle {
-  font-size: 10.5px;
-  color: var(--muted);
-  line-height: 1.2;
+  display: none;
 }
 
 .chart-toolbar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-wrap: nowrap;
+  gap: 5px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 /* Mode Toggle: NAV จริง vs % เปลี่ยนแปลง */
@@ -228,20 +230,39 @@
 .macd-signal-banner {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   background: rgba(31, 41, 61, 0.45);
   border: 1px solid var(--terminal-border);
   border-radius: var(--radius-sm);
-  padding: 6px 12px;
-  margin-bottom: 8px;
-  font-size: 11.5px;
+  padding: 2px 7px;
+  margin-bottom: 0;
+  font-size: 10.5px;
   color: var(--text);
   transition: var(--transition);
-  min-height: 32px;
+  min-height: 24px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .macd-signal-banner:empty {
   display: none;
+}
+
+.signal-metrics-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.signal-metrics-row strong {
+  color: var(--text);
+}
+
+.signal-sep {
+  color: var(--terminal-border-light);
+  opacity: 0.6;
 }
 
 .signal-tag {

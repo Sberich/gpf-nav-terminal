@@ -58,7 +58,36 @@ export class MetricCards {
     this.summaryData = options.summaryData || null;
     this.historyData = options.historyData || null;
     this.activePlanKey = options.activePlanKey || 'แผนเชิงรุก 35';
+    this.currentMode = options.defaultMode || 'nav';
+    this._initModeListener();
     this.render();
+  }
+
+  _initModeListener() {
+    if (typeof document !== 'undefined' && !this._hasModeListener) {
+      this._hasModeListener = true;
+      document.addEventListener('chart-mode-change', (e) => {
+        if (e.detail?.mode && e.detail.mode !== this.currentMode) {
+          this.setMode(e.detail.mode);
+        }
+      });
+    }
+  }
+
+  setMode(mode) {
+    if (mode !== 'nav' && mode !== 'pct') return;
+    this.currentMode = mode;
+    const navBtn = this.container?.querySelector('#hud-btn-mode-nav');
+    const pctBtn = this.container?.querySelector('#hud-btn-mode-pct');
+    if (navBtn && pctBtn) {
+      if (mode === 'nav') {
+        navBtn.classList.add('is-active');
+        pctBtn.classList.remove('is-active');
+      } else {
+        pctBtn.classList.add('is-active');
+        navBtn.classList.remove('is-active');
+      }
+    }
   }
 
   setPlan(planKey) {
@@ -262,14 +291,7 @@ export class MetricCards {
 
     this.container.innerHTML = `
       <div class="metric-cards-grid terminal-ticker-bar animate-fade-in">
-        <!-- 1. ข้อมูลล่าสุด -->
-        <div class="metric-card ticker-card card-date">
-          <div class="stat-label">ข้อมูลล่าสุด</div>
-          <div class="stat-val date-val">${thaiDate}</div>
-          <div class="stat-sub">วันทำการล่าสุด</div>
-        </div>
-
-        <!-- 2. แผนอ้างอิง + NAV ล่าสุด -->
+        <!-- 1. แผนอ้างอิง + NAV ล่าสุด -->
         <div class="metric-card ticker-card card-latest-nav">
           <div class="stat-label">
             <span class="plan-color-dot" style="background-color: ${plan.color}"></span>
@@ -360,7 +382,7 @@ export class MetricCards {
           </div>
         </div>
 
-        <!-- 10. ผลตอบแทนเฉลี่ยต่อปี (CAGR) & ATH -->
+        <!-- 9. ผลตอบแทนเฉลี่ยต่อปี (CAGR) & ATH -->
         <div class="metric-card ticker-card card-cagr-ath">
           <div class="stat-label">เฉลี่ยต่อปี (CAGR) & ATH</div>
           <div class="stat-val stat-val-dual">
@@ -371,8 +393,50 @@ export class MetricCards {
             ATH สูงสุด: ${athNav} ฿
           </div>
         </div>
+
+        <!-- 10. โหมดกราฟ (NAV จริง vs % เปลี่ยนแปลง) 2 บรรทัดจัดกึ่งกลาง -->
+        <div class="metric-card ticker-card card-chart-mode" title="สลับโหมดการแสดงผลของกราฟ (NAV จริง หรือ % เปลี่ยนแปลง)">
+          <div class="hud-mode-stack" role="group" aria-label="โหมดการแสดงผลกราฟ">
+            <button class="hud-mode-btn ${this.currentMode === 'nav' ? 'is-active' : ''}" data-mode="nav" id="hud-btn-mode-nav" title="แสดงมูลค่าหน่วยลงทุนจริง (บาท)">
+              NAV จริง
+            </button>
+            <button class="hud-mode-btn ${this.currentMode === 'pct' ? 'is-active' : ''}" data-mode="pct" id="hud-btn-mode-pct" title="เปรียบเทียบผลตอบแทนแบบ % (Base 0% จากวันแรก)">
+              % เปลี่ยนแปลง
+            </button>
+          </div>
+        </div>
       </div>
     `;
+
+    this.bindEvents();
+  }
+
+  bindEvents() {
+    if (!this.container) return;
+    const navBtn = this.container.querySelector ? this.container.querySelector('#hud-btn-mode-nav') : null;
+    const pctBtn = this.container.querySelector ? this.container.querySelector('#hud-btn-mode-pct') : null;
+
+    if (navBtn && typeof navBtn.addEventListener === 'function') {
+      navBtn.addEventListener('click', (e) => {
+        if (e && e.stopPropagation) e.stopPropagation();
+        this.setMode('nav');
+        if (typeof document !== 'undefined') {
+          const event = new CustomEvent('chart-mode-change', { detail: { mode: 'nav' }, bubbles: true });
+          document.dispatchEvent(event);
+        }
+      });
+    }
+
+    if (pctBtn && typeof pctBtn.addEventListener === 'function') {
+      pctBtn.addEventListener('click', (e) => {
+        if (e && e.stopPropagation) e.stopPropagation();
+        this.setMode('pct');
+        if (typeof document !== 'undefined') {
+          const event = new CustomEvent('chart-mode-change', { detail: { mode: 'pct' }, bubbles: true });
+          document.dispatchEvent(event);
+        }
+      });
+    }
   }
 }
 
