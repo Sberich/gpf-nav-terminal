@@ -1,13 +1,13 @@
 /**
  * GPF NAV Dashboard - Service Worker
- * Version: gpf-nav-v1
+ * Version: gpf-nav-v2
  * Features:
- * - App shell pre-caching
+ * - Network-first for HTML navigation requests (always load fresh UI)
  * - Network-first for /data/*.json with cache fallback when offline
  * - Cache-first for static assets (fonts, icons, styles, scripts)
  */
 
-const CACHE_NAME = 'gpf-nav-v1';
+const CACHE_NAME = 'gpf-nav-v2';
 
 const APP_SHELL_ASSETS = [
   '/',
@@ -40,7 +40,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
+          if (key.startsWith('gpf-nav-') && key !== CACHE_NAME) {
             return caches.delete(key);
           }
         })
@@ -59,7 +59,23 @@ self.addEventListener('fetch', (event) => {
   // Skip unsupported schemes
   if (!url.protocol.startsWith('http')) return;
 
-  // 1. Network-first with cache fallback for /data/*.json dynamic datasets
+  // 1. HTML navigation requests: Network-first so users immediately get updated UI releases
+  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // 2. Network-first with cache fallback for /data/*.json dynamic datasets
   if (url.pathname.includes('/data/') || url.pathname.endsWith('.json')) {
     event.respondWith(
       fetch(event.request)
