@@ -278,12 +278,31 @@
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
   overscroll-behavior-y: contain;
-  padding: 8px;
+  padding: 8px 8px 24px 8px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+.watchlist-scroll-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.watchlist-scroll-area::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+}
+
+.watchlist-scroll-area::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 4px;
+}
+
+.watchlist-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
 }
 
 .plan-category-group {
@@ -291,7 +310,6 @@
   border-radius: var(--radius-sm);
   background-color: rgba(0, 0, 0, 0.12);
   overflow: hidden;
-  touch-action: pan-y;
 }
 
 .plan-category-header {
@@ -364,7 +382,6 @@
   transition: background-color 0.12s ease, border-color 0.12s ease;
   gap: 6px;
   user-select: none;
-  touch-action: pan-y;
 }
 
 .plan-pill:hover {

@@ -74,7 +74,7 @@ export function renderHeader(container) {
             <h1 class="logo-title">GPF NAV Terminal</h1>
             <div class="logo-sub-row">
               <span class="logo-sub">กระดานเทรดกองทุน กบข.</span>
-              <span class="live-badge">
+              <span class="live-badge" id="btn-open-terminal-status" title="คลิกเพื่อดูสถานะระบบและข้อมูล NAV ล่าสุด">
                 <span class="live-dot"></span>
                 <span>TERMINAL</span>
               </span>
@@ -208,6 +208,16 @@ export function renderHeader(container) {
       const exportEvent = new CustomEvent('open-export-modal', { bubbles: true });
       document.dispatchEvent(exportEvent);
       window.dispatchEvent(exportEvent);
+    });
+  }
+
+  // Setup Terminal Status Modal Listener (Idea 1)
+  const terminalStatusBtn = document.getElementById('btn-open-terminal-status') || container.querySelector?.('#btn-open-terminal-status');
+  if (terminalStatusBtn) {
+    terminalStatusBtn.addEventListener('click', () => {
+      const statusEvent = new CustomEvent('open-terminal-status', { bubbles: true });
+      document.dispatchEvent(statusEvent);
+      window.dispatchEvent(statusEvent);
     });
   }
 

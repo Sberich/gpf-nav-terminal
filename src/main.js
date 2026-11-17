@@ -9,6 +9,7 @@ import { WhatIfModal, renderWhatIfModal } from './components/WhatIfModal.js';
 import { PinModal, renderPinModal } from './components/PinModal.js';
 import { ExportModal, renderExportModal } from './components/ExportModal.js';
 import { DevModal, renderDevModal } from './components/DevModal.js';
+import { TerminalStatusModal, renderTerminalStatusModal } from './components/TerminalStatusModal.js';
 
 let metricCardsInstance = null;
 let planSelectorInstance = null;
@@ -17,6 +18,7 @@ let whatIfModalInstance = null;
 let pinModalInstance = null;
 let exportModalInstance = null;
 let devModalInstance = null;
+let terminalStatusModalInstance = null;
 
 /**
  * Initialize Application Theme from localStorage (defaults to dark)
@@ -230,6 +232,10 @@ async function initComponents() {
       });
 
       exportModalInstance = renderExportModal(modalsContainer);
+
+      terminalStatusModalInstance = renderTerminalStatusModal(modalsContainer, {
+        getSummaryData: () => summaryData
+      });
 
       const cachedVisitVersion = (typeof localStorage !== 'undefined' && localStorage.getItem('gpf_visit_version')) || 'v1.1278';
 
