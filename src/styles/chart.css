@@ -56,10 +56,14 @@
 /* Mode Toggle: NAV จริง vs % เปลี่ยนแปลง */
 .chart-mode-group {
   display: inline-flex;
-  border: 1px solid var(--terminal-border);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-sm);
   overflow: hidden;
-  background: var(--terminal-bg);
+  background: transparent;
+}
+
+[data-theme="light"] .chart-mode-group {
+  border-color: rgba(0, 0, 0, 0.12);
 }
 
 .mode-btn {
@@ -71,93 +75,76 @@
   font-weight: 600;
   padding: 4px 10px;
   cursor: pointer;
-  transition: all 0.15s ease-in-out;
+  transition: all 0.2s ease-in-out;
   white-space: nowrap;
   user-select: none;
 }
 
 .mode-btn:hover:not(.is-active) {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(56, 139, 253, 0.08);
 }
 
 .mode-btn.is-active {
-  background: var(--accent);
-  color: #ffffff;
+  background: rgba(56, 139, 253, 0.15);
+  color: #58a6ff;
+  border: 1px solid #388bfd;
+  box-shadow: 0 0 10px rgba(56, 139, 253, 0.45), inset 0 0 6px rgba(56, 139, 253, 0.18);
+  text-shadow: 0 0 8px rgba(88, 166, 255, 0.5);
 }
 
-/* Chart Action Button (Auto-Fit) */
+/* Chart Action Button (Signals / TradingView) */
 .chart-action-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: var(--terminal-bg);
-  border: 1px solid var(--terminal-border);
+  gap: 5px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-sm);
   color: var(--muted);
   font-family: var(--font);
   font-size: 11px;
   font-weight: 600;
-  padding: 4px 9px;
+  padding: 4px 10px;
   cursor: pointer;
-  transition: all 0.15s ease-in-out;
+  transition: all 0.2s ease-in-out;
   user-select: none;
   white-space: nowrap;
 }
 
-.chart-action-btn:hover {
+[data-theme="light"] .chart-action-btn {
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.chart-action-btn:hover:not(.is-active) {
   color: var(--text);
-  border-color: var(--accent);
-  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(56, 139, 253, 0.4);
+  background: rgba(56, 139, 253, 0.08);
 }
 
 .chart-action-btn.is-active {
   background: rgba(56, 139, 253, 0.15);
-  border-color: var(--accent);
+  border-color: #388bfd;
   color: #58a6ff;
-}
-
-/* Draggable Chart Resizer */
-.chart-resizer {
-  width: 100%;
-  height: 12px;
-  cursor: ns-resize;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 4px;
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
-  user-select: none;
-}
-
-.chart-resizer:hover {
-  opacity: 1;
-}
-
-.resizer-handle {
-  width: 48px;
-  height: 4px;
-  background: var(--terminal-border);
-  border-radius: 2px;
-  transition: background 0.2s ease;
-}
-
-.chart-resizer:hover .resizer-handle {
-  background: var(--accent);
+  box-shadow: 0 0 10px rgba(56, 139, 253, 0.45), inset 0 0 6px rgba(56, 139, 253, 0.18);
+  text-shadow: 0 0 8px rgba(88, 166, 255, 0.5);
 }
 
 /* Timeframe Group */
 .timeframe-group {
   display: inline-flex;
   align-items: center;
-  background: var(--terminal-bg);
-  border: 1px solid var(--terminal-border);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-sm);
   padding: 2px;
   gap: 2px;
   overflow-x: auto;
   max-width: 100%;
+}
+
+[data-theme="light"] .timeframe-group {
+  border-color: rgba(0, 0, 0, 0.12);
 }
 
 .timeframe-btn {
@@ -170,19 +157,27 @@
   padding: 3px 9px;
   border-radius: 3px;
   cursor: pointer;
-  transition: all 0.15s ease-in-out;
+  transition: all 0.2s ease-in-out;
   white-space: nowrap;
   user-select: none;
 }
 
-.timeframe-btn:hover {
+.timeframe-btn:hover:not(.is-active) {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(56, 139, 253, 0.08);
 }
 
 .timeframe-btn.is-active {
-  background: var(--accent);
-  color: #ffffff;
+  background: rgba(56, 139, 253, 0.15);
+  color: #58a6ff;
+  border: 1px solid #388bfd;
+  box-shadow: 0 0 10px rgba(56, 139, 253, 0.45), inset 0 0 6px rgba(56, 139, 253, 0.18);
+  text-shadow: 0 0 8px rgba(88, 166, 255, 0.5);
+}
+
+/* Draggable Chart Resizer (hidden in 100vh layout) */
+.chart-resizer {
+  display: none !important;
 }
 
 /* Normalize Banner */

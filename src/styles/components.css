@@ -8,11 +8,81 @@
    ========================================================================== */
 
 .metric-cards-grid,
+.terminal-hud-container,
 .terminal-ticker-bar {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  display: flex;
   gap: 8px;
   width: 100%;
+  align-items: stretch;
+}
+
+/* Zone 1: Hero Selected Plan & Price Focus */
+.hud-zone-hero {
+  flex: 0 0 240px;
+  min-width: 210px;
+}
+
+.hero-card {
+  height: 100%;
+  background: linear-gradient(135deg, rgba(56, 139, 253, 0.08) 0%, rgba(13, 17, 23, 0.95) 100%);
+  border: 1px solid rgba(56, 139, 253, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.hero-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-date-badge {
+  font-size: 10px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.hero-price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.hero-card .nav-number {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.hero-change {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Zone 2: Technical Momentum & Range Indicators (5 items) */
+.hud-zone-metrics {
+  flex: 5;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+/* Zone 3: Market Overview & Long-Term Performance (3 items) */
+.hud-zone-context {
+  flex: 3;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
 }
 
 .metric-card,
@@ -551,18 +621,61 @@
   }
 }
 
-@media (max-width: 768px) {
-  .metric-cards-grid,
+@media (max-width: 1024px) {
+  .terminal-hud-container,
   .terminal-ticker-bar {
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    flex-direction: column;
     gap: 6px;
   }
 
+  .hud-zone-hero {
+    flex: none;
+    width: 100%;
+  }
+
+  .hud-zone-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+    gap: 6px;
+  }
+
+  .hud-zone-context {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+    gap: 6px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-card .nav-number {
+    font-size: 16px;
+  }
+
+  .hud-zone-metrics,
+  .hud-zone-context {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+  }
+
+  .metric-card,
+  .ticker-card {
+    padding: 6px 8px;
+    min-height: 52px;
+  }
+
+  .stat-label {
+    font-size: 9.5px;
+  }
+
   .stat-val {
-    font-size: 12px;
+    font-size: 11.5px;
+  }
+
+  .stat-sub {
+    font-size: 9px;
   }
 
   .nav-number {
-    font-size: 12.5px;
+    font-size: 14px;
   }
 }
