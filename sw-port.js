@@ -29,7 +29,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(names =>
-      Promise.all(names.map(c => c !== CACHE_NAME ? caches.delete(c) : undefined))
+      Promise.all(names.map(c => (c.startsWith('gpf-port-') && c !== CACHE_NAME) ? caches.delete(c) : undefined))
     )
   );
   self.clients.claim();

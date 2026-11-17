@@ -1647,8 +1647,13 @@
         if (donutData.length > 0 && window.Chart) {
           document.getElementById('donut-container').style.display = 'flex';
           document.getElementById('donut-center-val').innerText = formatMoney(totalValue);
-          const ctx = document.getElementById('donutChart').getContext('2d');
-          new Chart(ctx, {
+          const donutCanvas = document.getElementById('donutChart');
+          if (window._donutChartInstance) {
+            try { window._donutChartInstance.destroy(); } catch (e) {}
+            window._donutChartInstance = null;
+          }
+          const ctx = donutCanvas.getContext('2d');
+          window._donutChartInstance = new Chart(ctx, {
             type: 'doughnut',
             data: {
               labels: donutLabels,
@@ -1816,8 +1821,13 @@
           // document.getElementById('chart-container').style.display = 'block';
           const container = document.getElementById('chart-container');
           if (container.style.display !== 'none') {
-            const ctx = document.getElementById('portChart').getContext('2d');
-            new Chart(ctx, {
+            const portCanvas = document.getElementById('portChart');
+            if (window._portChartInstance) {
+              try { window._portChartInstance.destroy(); } catch (e) {}
+              window._portChartInstance = null;
+            }
+            const ctx = portCanvas.getContext('2d');
+            window._portChartInstance = new Chart(ctx, {
               type: 'line',
               data: {
                 labels: chartDataDates,
@@ -2549,14 +2559,7 @@
   <!-- PWA: ลงทะเบียน Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', async () => {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        for (const reg of regs) {
-          if (reg.active && !reg.active.scriptURL.includes('sw-port.js')) {
-            await reg.unregister();
-            console.log('Unregistered old SW:', reg.active.scriptURL);
-          }
-        }
+      window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw-port.js')
           .then(reg => console.log('SW (Port) registered', reg))
           .catch(err => console.error('SW register failed', err));

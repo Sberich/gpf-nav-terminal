@@ -746,7 +746,7 @@
       avgGain = ((avgGain * (period - 1)) + gain) / period;
       avgLoss = ((avgLoss * (period - 1)) + loss) / period;
     }
-    if (avgLoss === 0) return 100;
+    if (avgLoss === 0) return avgGain > 0 ? 100 : 50;
     let rs = avgGain / avgLoss;
     return 100 - (100 / (1 + rs));
   }
@@ -786,7 +786,7 @@
     const d0 = new Date(datesArray[idx[0]]);
     const d1 = new Date(datesArray[idx[idx.length - 1]]);
     const years = (d1 - d0) / (365.25 * 24 * 3600000);
-    if (years <= 0 || start <= 0) return 0;
+    if (isNaN(years) || years <= 0 || start <= 0) return 0;
     return Math.pow(end / start, 1 / years) - 1;
   }
   function calcVolatility(returns) {
@@ -840,45 +840,39 @@
   function calcCovMatrix(allReturns) {
     const n = allReturns.length;
     const T_total = allReturns[0].length;
-    
-    // 1. หา "วันที่ทุกแผนที่ใช้มีข้อมูลพร้อมกัน" (List-wise deletion)
-    const rows = [];
-    for (let t = 0; t < T_total; t++) {
-      let allValid = true;
-      for (let i = 0; i < n; i++) {
-        if (allReturns[i][t] === null) { allValid = false; break; }
-      }
-      if (allValid) {
-        rows.push(allReturns.map(r => r[t]));
-      }
-    }
-    
-    const count = rows.length;
     const matrix = Array.from({length: n}, () => Array(n).fill(0));
-    if (count < 2) return matrix;
 
-    // 2. คำนวณ Mean ของแต่ละแผน (บนวันชุดเดียวกัน)
-    const means = Array(n).fill(0);
-    for (let i = 0; i < n; i++) {
-      for (let t = 0; t < count; t++) means[i] += rows[t][i];
-      means[i] /= count;
-    }
-
-    // 3. คำนวณ Covariance Matrix (Sample Covariance)
+    // 1. Pairwise complete observations (ใช้วันที่มีข้อมูลร่วมกันของแต่ละคู่ เพื่อไม่ให้กองใหม่ตัดข้อมูลกองเก่าทิ้ง)
     for (let i = 0; i < n; i++) {
       for (let j = 0; j <= i; j++) {
+        let count = 0, sumI = 0, sumJ = 0;
+        for (let t = 0; t < T_total; t++) {
+          if (allReturns[i][t] !== null && allReturns[j][t] !== null) {
+            count++;
+            sumI += allReturns[i][t];
+            sumJ += allReturns[j][t];
+          }
+        }
+        if (count < 2) {
+          matrix[i][j] = (i === j) ? 0.0001 : 0;
+          matrix[j][i] = matrix[i][j];
+          continue;
+        }
+        const meanI = sumI / count;
+        const meanJ = sumJ / count;
         let cov = 0;
-        for (let t = 0; t < count; t++) {
-          cov += (rows[t][i] - means[i]) * (rows[t][j] - means[j]);
+        for (let t = 0; t < T_total; t++) {
+          if (allReturns[i][t] !== null && allReturns[j][t] !== null) {
+            cov += (allReturns[i][t] - meanI) * (allReturns[j][t] - meanJ);
+          }
         }
         cov = (cov / (count - 1)) * 252; // Annualize Covariance
-        
         matrix[i][j] = cov;
         matrix[j][i] = cov;
       }
     }
 
-    // 4. Ledoit-Wolf Shrinkage (Σ' = 0.8Σ + 0.2·diag(Σ))
+    // 2. Ledoit-Wolf Shrinkage (Σ' = 0.8Σ + 0.2·diag(Σ))
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
         if (i !== j) {
@@ -896,7 +890,8 @@
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
         if (cov[i][i] > 0 && cov[j][j] > 0) {
-          matrix[i][j] = cov[i][j] / Math.sqrt(cov[i][i] * cov[j][j]);
+          const unshrinkCov = (i === j) ? cov[i][i] : (cov[i][j] / 0.8);
+          matrix[i][j] = unshrinkCov / Math.sqrt(cov[i][i] * cov[j][j]);
         } else {
           matrix[i][j] = (i === j) ? 1 : 0;
         }
@@ -1028,7 +1023,7 @@
   function safeMomentum(navArray, lookback) {
     // === FIX: Clean NAV series FIRST, then slice exactly `lookback` trading days ===
     const { values } = cleanNavSeries(navArray);
-    if (values.length < 2) return null;
+    if (values.length < lookback || values.length < 2) return null;
     
     const windowValues = values.slice(-lookback);
     const n = windowValues.length;
@@ -1067,28 +1062,33 @@
     const blendedReturns = [null];
     
     // Store last valid NAV for each plan
-    const lastValidNavs = navArrays.map(arr => {
-      for(let i=0; i<arr.length; i++) { if(arr[i] && arr[i]>0) return arr[i]; }
-      return 1;
-    });
+    const lastValidNavs = Array(weights.length).fill(null);
 
     for (let t = 1; t < minLen; t++) {
-      let dailyLogRet = 0;
-      let validAssetCount = 0;
+      let activeWeightSum = 0;
       for (let i = 0; i < weights.length; i++) {
         if (weights[i] === 0) continue;
         const curr = navArrays[i][t];
-        const prev = lastValidNavs[i];
-        
-        let assetRet = 0;
         if (curr && curr > 0) {
-           assetRet = Math.log(curr / prev);
-           lastValidNavs[i] = curr;
-           validAssetCount++;
+          if (!lastValidNavs[i]) {
+            lastValidNavs[i] = curr;
+          } else {
+            activeWeightSum += weights[i];
+          }
         }
-        dailyLogRet += weights[i] * assetRet;
       }
-      if (validAssetCount > 0) {
+
+      if (activeWeightSum > 0) {
+        let dailyLogRet = 0;
+        for (let i = 0; i < weights.length; i++) {
+          if (weights[i] === 0) continue;
+          const curr = navArrays[i][t];
+          const prev = lastValidNavs[i];
+          if (curr && curr > 0 && prev && prev > 0) {
+            dailyLogRet += (weights[i] / activeWeightSum) * Math.log(curr / prev);
+            lastValidNavs[i] = curr;
+          }
+        }
         blendedReturns.push(dailyLogRet);
         blendedNav.push(blendedNav[blendedNav.length - 1] * Math.exp(dailyLogRet));
       } else {
@@ -2108,15 +2108,16 @@
     const targetTab = document.querySelector(`.tab[data-tab="${tabId}"]`);
     if (targetTab) targetTab.classList.add('active');
     
-    if (tabId === 'mc' && currentMcResult) {
-      const adjustInflation = document.getElementById('adjustInflation').checked;
+    if ((tabId === 'montecarlo' || tabId === 'mc') && currentMcResult) {
+      const adjustInflation = document.getElementById('adjustInflation')?.checked ?? false;
       renderMonteCarlo(currentMcResult, currentAge, adjustInflation, 0.03);
     }
   }
   
   window.addEventListener('resize', () => {
-    if (document.getElementById('tab-mc').classList.contains('active') && currentMcResult) {
-      const adjustInflation = document.getElementById('adjustInflation').checked;
+    const mcTab = document.getElementById('tab-montecarlo');
+    if (mcTab && mcTab.classList.contains('active') && currentMcResult) {
+      const adjustInflation = document.getElementById('adjustInflation')?.checked ?? false;
       renderMonteCarlo(currentMcResult, currentAge, adjustInflation, 0.03);
     }
   });
@@ -2511,14 +2512,7 @@
   window.onload = function() { loadGPFData(); };
 
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', async () => {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      for (const reg of regs) {
-        if (reg.active && !reg.active.scriptURL.includes('sw-robo.js')) {
-          await reg.unregister();
-          console.log('Unregistered old SW:', reg.active.scriptURL);
-        }
-      }
+    window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw-robo.js')
         .then(reg => console.log('SW (Robo) registered', reg))
         .catch(err => console.error('SW register failed', err));
