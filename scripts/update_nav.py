@@ -68,9 +68,9 @@ PLAN_COLORS: Dict[str, str] = {
     "แผนกองทุนอสังหาริมทรัพย์ไทย": "#FF5722",
     "แผนทองคำ": "#FFC107",
     "แผนกองทุนรวมวายุภักษ์": "#3F51B5",
-    "แผนการลงทุนตามหลักชะรีอะฮ์": "#FF6F00",
+    "แผนการลงทุนตามหลักชะรีอะฮ์": "#059669",
     "แผนลงทุนพื้นฐานทั่วไป": "#4CAF50",
-    "แผนเกษียณสบายใจ 2569": "#FF6F00",
+    "แผนเกษียณสบายใจ 2569": "#E11D48",
 }
 
 GPF_API_BASE = "https://www.gpf.or.th/thai2019/About/memberfund-api.php"
@@ -97,11 +97,13 @@ def fetch_gpf_direct_records(timeout: int = 15) -> List[Dict]:
     """Fetch daily NAV data directly from official GPF API (gpf.or.th) with standard browser headers."""
     import urllib.request
     now = datetime.datetime.now()
-    months_to_try = [(now.month, now.year)]
-    if now.day <= 5:
-        prev_m = 12 if now.month == 1 else now.month - 1
-        prev_y = now.year - 1 if now.month == 1 else now.year
-        months_to_try.insert(0, (prev_m, prev_y))
+    # Query rolling 3-month window to prevent gaps if jobs are skipped
+    months_to_try = []
+    for back in range(3):
+        cur_m = (now.month - back - 1) % 12 + 1
+        cur_y = now.year if (now.month - back) > 0 else now.year - 1
+        months_to_try.append((cur_m, cur_y))
+    months_to_try.reverse()
 
     raw_items = []
     headers = {
@@ -152,7 +154,8 @@ def fetch_gpf_direct_records(timeout: int = 15) -> List[Dict]:
         for cost_key, plan_name in GPF_PLAN_MAP.items():
             val = item.get(cost_key)
             try:
-                plans[plan_name] = float(val) if val is not None else None
+                f_val = float(val) if val is not None else None
+                plans[plan_name] = f_val if (f_val is not None and f_val > 0.0) else None
             except (ValueError, TypeError):
                 plans[plan_name] = None
         results.append({"date": iso_date, "plans": plans})
@@ -413,20 +416,23 @@ def downsample_unified_indices(
 
 
 def generate_nav_chart(
-    records: List[Dict], max_points: int = 2000
+    records: List[Dict], max_points: int = 5000
 ) -> Dict:
     """Generate synchronized multi-series chart dictionary where all plans share identical dates."""
     if not records:
         return {"dates": [], "series": [], "count": 0}
 
-    # Use 'แผนลงทุนพื้นฐานทั่วไป' or first plan with complete data as reference for LTTB
-    ref_plan = "แผนลงทุนพื้นฐานทั่วไป"
-    ref_y = [r["plans"].get(ref_plan) for r in records]
-    if any(v is None for v in ref_y):
-        ref_plan = "แผนเชิงรุก 35"
+    # If records count is within threshold, keep 100% of points without downsampling loss
+    if len(records) <= max_points:
+        sampled_indices = list(range(len(records)))
+    else:
+        # Use 'แผนลงทุนพื้นฐานทั่วไป' or first plan with complete data as reference for LTTB
+        ref_plan = "แผนลงทุนพื้นฐานทั่วไป"
         ref_y = [r["plans"].get(ref_plan) for r in records]
-
-    sampled_indices = downsample_unified_indices(ref_y, threshold=max_points)
+        if any(v is None for v in ref_y):
+            ref_plan = "แผนเชิงรุก 35"
+            ref_y = [r["plans"].get(ref_plan) for r in records]
+        sampled_indices = downsample_unified_indices(ref_y, threshold=max_points)
 
     dates = [records[i]["date"] for i in sampled_indices]
     series: List[Dict] = []

@@ -162,7 +162,8 @@ def parse_csv_content(csv_text: str) -> List[Dict]:
                     plans_dict[plan] = None
                 else:
                     try:
-                        plans_dict[plan] = round(float(val_str), 4)
+                        f_v = float(val_str)
+                        plans_dict[plan] = round(f_v, 4) if f_v > 0.0 else None
                     except ValueError:
                         plans_dict[plan] = None
             else:
