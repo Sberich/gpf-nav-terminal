@@ -10,79 +10,26 @@
 .metric-cards-grid,
 .terminal-hud-container,
 .terminal-ticker-bar {
-  display: flex;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 6px;
   width: 100%;
-  align-items: stretch;
 }
 
-/* Zone 1: Hero Selected Plan & Price Focus */
-.hud-zone-hero {
-  flex: 0 0 240px;
-  min-width: 210px;
+@media (max-width: 1440px) {
+  .metric-cards-grid,
+  .terminal-hud-container,
+  .terminal-ticker-bar {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
 }
 
-.hero-card {
-  height: 100%;
-  background: linear-gradient(135deg, rgba(56, 139, 253, 0.08) 0%, rgba(13, 17, 23, 0.95) 100%);
-  border: 1px solid rgba(56, 139, 253, 0.35);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-  padding: 6px 12px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.hero-top-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 6px;
-}
-
-.stat-date-badge {
-  font-size: 10px;
-  color: var(--muted);
-  background: rgba(255, 255, 255, 0.05);
-  padding: 1px 6px;
-  border-radius: 4px;
-  white-space: nowrap;
-}
-
-.hero-price-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 2px;
-}
-
-.hero-card .nav-number {
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: -0.3px;
-}
-
-.hero-change {
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-/* Zone 2: Technical Momentum & Range Indicators (5 items) */
-.hud-zone-metrics {
-  flex: 5;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
-}
-
-/* Zone 3: Market Overview & Long-Term Performance (3 items) */
-.hud-zone-context {
-  flex: 3;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+@media (max-width: 768px) {
+  .metric-cards-grid,
+  .terminal-hud-container,
+  .terminal-ticker-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .metric-card,
@@ -90,14 +37,19 @@
   background-color: var(--terminal-card);
   border: 1px solid var(--terminal-border);
   border-radius: var(--radius-sm);
-  padding: 8px 10px;
+  padding: 7px 9px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 62px;
+  min-height: 58px;
   transition: border-color 0.15s ease, background-color 0.15s ease;
   overflow: hidden;
   position: relative;
+}
+
+.card-latest-nav {
+  border-color: rgba(56, 139, 253, 0.35);
+  background: linear-gradient(135deg, rgba(56, 139, 253, 0.08) 0%, rgba(13, 17, 23, 0.95) 100%);
 }
 
 .metric-card:hover,
@@ -270,6 +222,8 @@
 .watchlist-sidebar-card {
   width: 100%;
   height: 100%;
+  min-height: 0;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
   background: var(--terminal-card);
@@ -277,6 +231,7 @@
   border-radius: 0;
   padding: 0;
   margin: 0;
+  overflow: hidden;
 }
 
 .watchlist-header {
@@ -318,8 +273,13 @@
 
 .watchlist-scroll-area,
 .plan-categories-list {
-  flex: 1;
+  flex: 1 1 0%;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -331,6 +291,7 @@
   border-radius: var(--radius-sm);
   background-color: rgba(0, 0, 0, 0.12);
   overflow: hidden;
+  touch-action: pan-y;
 }
 
 .plan-category-header {
@@ -403,6 +364,7 @@
   transition: background-color 0.12s ease, border-color 0.12s ease;
   gap: 6px;
   user-select: none;
+  touch-action: pan-y;
 }
 
 .plan-pill:hover {

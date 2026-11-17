@@ -846,6 +846,11 @@ export class ChartView {
             <button class="chart-action-btn ${this.chartEngine === 'tradingview' ? 'is-active' : ''}" id="btn-toggle-engine" title="สลับการแสดงผลระหว่างกราฟ ApexCharts และ TradingView">
               <span>TradingView</span>
             </button>
+
+            <!-- Chart Auto-Fit Height Toggle -->
+            <button class="chart-action-btn ${this.isAutoFit ? 'is-active' : ''}" id="btn-chart-autofit" title="ขยายกราฟให้พอดีความสูงหน้าจอ (Auto-Fit) หรือคืนค่าขนาดเดิม">
+              <span>${this.isAutoFit ? '↕ ขนาดมาตรฐาน' : '⛶ พอดีหน้าจอ'}</span>
+            </button>
           </div>
         </div>
 
@@ -858,6 +863,11 @@ export class ChartView {
 
         <div class="chart-render-area" id="apexcharts-area" style="display: ${this.chartEngine === 'apex' ? 'block' : 'none'};"></div>
         <div class="chart-render-area tv-chart-area" id="tradingview-area" style="display: ${this.chartEngine === 'tradingview' ? 'block' : 'none'};"></div>
+
+        <!-- Draggable Resizer Bar -->
+        <div class="chart-resizer" id="chart-resizer" title="คลิกลากขึ้นลงเพื่อปรับความสูงกราฟ">
+          <div class="resizer-handle"></div>
+        </div>
       </div>
     `;
 
@@ -1116,12 +1126,21 @@ export class ChartView {
     }
     if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
       window.addEventListener('resize', () => {
-        if (this.chart && typeof this.chart.updateOptions === 'function') {
+        if (this.isAutoFit) {
           const newH = this.calculateChartHeight();
-          this.chart.updateOptions({
-            chart: { height: newH },
-            annotations: this.getAnnotations()
-          }, false, false);
+          if (this.chart && typeof this.chart.updateOptions === 'function') {
+            this.chart.updateOptions({
+              chart: { height: newH },
+              annotations: this.getAnnotations()
+            }, false, false);
+          }
+          if (this.tvChart && typeof this.tvChart.resize === 'function') {
+            const tvArea = this.container?.querySelector('#tradingview-area');
+            if (tvArea) {
+              tvArea.style.height = `${newH}px`;
+              this.tvChart.resize(tvArea.clientWidth, newH);
+            }
+          }
         }
       });
     }
@@ -1200,26 +1219,43 @@ export class ChartView {
       }, false, true);
     }
 
+    if (this.tvChart && typeof this.tvChart.resize === 'function') {
+      const tvArea = this.container?.querySelector('#tradingview-area');
+      if (tvArea) {
+        tvArea.style.height = `${targetHeight}px`;
+        const tvCanvas = tvArea.querySelector('.tv-render-canvas');
+        if (tvCanvas) tvCanvas.style.height = `${targetHeight}px`;
+        const tvWrap = tvArea.querySelector('.tv-wrapper');
+        if (tvWrap) tvWrap.style.height = `${targetHeight}px`;
+        this.tvChart.resize(tvArea.clientWidth, targetHeight);
+      }
+    }
+
     if (this.isAutoFit) {
       showToast('⛶ ขยายกราฟเต็มพื้นที่หน้าจอเรียบร้อย');
     } else {
-      showToast('↕ ปรับความสูงกราฟเป็นขนาดมาตรฐาน (450px)');
+      showToast('↕ ปรับความสูงกราฟเป็นขนาดมาตรฐาน (480px)');
     }
   }
 
   calculateChartHeight() {
-    if (typeof window !== 'undefined' && window.innerHeight) {
-      if (window.innerWidth > 1024) {
-        // True 100vh docked terminal height:
-        // Measure parent stage and hud to compute exact remaining height for chart canvas
-        const hudEl = document.querySelector('#metric-cards-container');
-        const hudH = hudEl && hudEl.offsetHeight > 0 ? hudEl.offsetHeight : 70;
-        // Total screen height minus header (52px), stage padding (22px), hud height, gaps and card header/padding (~76px)
-        const available = window.innerHeight - 52 - 22 - hudH - 8 - 76;
-        return Math.max(450, available);
-      }
+    if (this.isAutoFit && typeof window !== 'undefined' && window.innerHeight) {
+      // True 100vh docked terminal height:
+      // Measure parent stage and hud to compute exact remaining height for chart canvas
+      const hudEl = document.querySelector('#metric-cards-container');
+      const hudH = hudEl && hudEl.offsetHeight > 0 ? hudEl.offsetHeight : 70;
+      const bannerEl = this.container?.querySelector('#macd-signal-banner');
+      const bannerH = (this.showSignalOverlay && bannerEl && bannerEl.offsetHeight > 0) ? bannerEl.offsetHeight : (this.showSignalOverlay ? 30 : 0);
+      const normEl = this.container?.querySelector('#normalize-banner');
+      const normH = (this.currentMode === 'pct' && normEl && normEl.offsetHeight > 0) ? normEl.offsetHeight : 0;
+
+      // Screen innerHeight minus:
+      // header (52px), stage padding (20px), HUD height, stage gaps (12px),
+      // chart header (44px), banner(s), chart-card padding (26px)
+      const available = window.innerHeight - 52 - 20 - hudH - 12 - 44 - bannerH - normH - 26;
+      return Math.max(450, available);
     }
-    return this.chartHeight || 450;
+    return this.chartHeight || 480;
   }
 
   _bindResizer() {
@@ -1241,6 +1277,17 @@ export class ChartView {
       }
       if (this.chart && typeof this.chart.updateOptions === 'function') {
         this.chart.updateOptions({ chart: { height: newHeight } }, false, false);
+      }
+      if (this.tvChart && typeof this.tvChart.resize === 'function') {
+        const tvArea = this.container?.querySelector('#tradingview-area');
+        if (tvArea) {
+          tvArea.style.height = `${newHeight}px`;
+          const tvCanvas = tvArea.querySelector('.tv-render-canvas');
+          if (tvCanvas) tvCanvas.style.height = `${newHeight}px`;
+          const tvWrap = tvArea.querySelector('.tv-wrapper');
+          if (tvWrap) tvWrap.style.height = `${newHeight}px`;
+          this.tvChart.resize(tvArea.clientWidth, newHeight);
+        }
       }
     };
 
@@ -1538,7 +1585,13 @@ export class ChartView {
       showToast('📊 สลับไปใช้กราฟ TradingView เรียบร้อย');
     } else {
       if (tvArea) tvArea.style.display = 'none';
-      if (apexArea) apexArea.style.display = 'block';
+      if (apexArea) {
+        apexArea.style.display = 'block';
+        const targetHeight = this.calculateChartHeight();
+        if (this.chart && typeof this.chart.updateOptions === 'function') {
+          this.chart.updateOptions({ chart: { height: targetHeight } }, false, false);
+        }
+      }
       this.updateChartData(true);
       showToast('📈 สลับกลับมาใช้กราฟมาตรฐาน เรียบร้อย');
     }
@@ -1582,6 +1635,16 @@ export class ChartView {
       analysis,
       pins
     });
+
+    const targetHeight = this.calculateChartHeight();
+    tvArea.style.height = `${targetHeight}px`;
+    const tvCanvas = tvArea.querySelector('.tv-render-canvas');
+    if (tvCanvas) tvCanvas.style.height = `${targetHeight}px`;
+    const tvWrap = tvArea.querySelector('.tv-wrapper');
+    if (tvWrap) tvWrap.style.height = `${targetHeight}px`;
+    if (this.tvChart && typeof this.tvChart.resize === 'function') {
+      this.tvChart.resize(tvArea.clientWidth, targetHeight);
+    }
   }
 
   // Alias for backward compatibility

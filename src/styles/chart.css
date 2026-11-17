@@ -175,9 +175,34 @@
   text-shadow: 0 0 8px rgba(88, 166, 255, 0.5);
 }
 
-/* Draggable Chart Resizer (hidden in 100vh layout) */
+/* Draggable Chart Resizer */
 .chart-resizer {
-  display: none !important;
+  width: 100%;
+  height: 12px;
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+  user-select: none;
+}
+
+.chart-resizer:hover {
+  opacity: 1;
+}
+
+.resizer-handle {
+  width: 48px;
+  height: 4px;
+  background: var(--terminal-border);
+  border-radius: 2px;
+  transition: background 0.2s ease;
+}
+
+.chart-resizer:hover .resizer-handle {
+  background: var(--accent);
 }
 
 /* Normalize Banner */
