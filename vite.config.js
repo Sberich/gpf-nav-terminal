@@ -13,7 +13,9 @@ function copyRootCompanionFiles() {
         'sw-robo.js',
         'manifest-port.json',
         'manifest-robo-v2.json',
-        'config.js'
+        'config.js',
+        'GPFLogo.png',
+        'GPF1.png'
       ];
       const distDir = path.resolve(__dirname, 'dist');
       if (!fs.existsSync(distDir)) return;
