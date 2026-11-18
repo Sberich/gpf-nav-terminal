@@ -69,7 +69,7 @@ export function renderHeader(container) {
     <header class="app-header">
       <div class="header-container">
         <div class="header-brand">
-          <img src="/GPFLogo.png" class="brand-logo-img logo-badge" id="brand-logo-img" alt="GPF Logo" title="กองทุนบำเหน็จบำนาญข้าราชการ (กบข.)" />
+          <img src="./GPFLogo.png" class="brand-logo-img logo-badge" id="brand-logo-img" alt="GPF Logo" title="กองทุนบำเหน็จบำนาญข้าราชการ (กบข.)" />
           <h1 class="logo-title" title="GPF NAV Terminal">NAV</h1>
           <span class="live-badge" id="btn-open-terminal-status" title="คลิกเพื่อดูสถานะระบบและข้อมูล NAV ล่าสุด">
             <span class="live-dot"></span>
