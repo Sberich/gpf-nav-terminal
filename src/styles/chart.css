@@ -49,7 +49,7 @@
 .chart-toolbar {
   display: flex;
   align-items: center;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 5px;
   margin-left: auto;
   flex-shrink: 0;

@@ -98,17 +98,20 @@ def verify_parity(
         r["date"]: r.get("plans", {}) for r in json_records
     }
 
-    # 1. Compare row counts
-    if len(csv_records) != len(json_records):
+    csv_dates = set(csv_by_date.keys())
+    json_dates = set(json_by_date.keys())
+    max_csv_date = max(csv_dates) if csv_dates else ""
+    newer_ahead_dates = sorted([d for d in (json_dates - csv_dates) if d > max_csv_date])
+    historical_missing_in_csv = sorted([d for d in (json_dates - csv_dates) if d <= max_csv_date])
+
+    # 1. Compare row counts (accounting for valid newer records ahead of Google Sheet CSV)
+    if len(csv_records) + len(newer_ahead_dates) != len(json_records):
         discrepancies.append(
             f"Row count mismatch: {source_label} has {len(csv_records)} rows, "
-            f"{target_label} has {len(json_records)} rows."
+            f"{target_label} has {len(json_records)} rows (expected {len(csv_records) + len(newer_ahead_dates)})."
         )
 
     # 2. Check for missing or extra dates
-    csv_dates = set(csv_by_date.keys())
-    json_dates = set(json_by_date.keys())
-
     missing_in_json = sorted(list(csv_dates - json_dates))
     if missing_in_json:
         for d in missing_in_json[:10]:
@@ -116,12 +119,14 @@ def verify_parity(
         if len(missing_in_json) > 10:
             discrepancies.append(f"... and {len(missing_in_json) - 10} more dates missing in {target_label}")
 
-    missing_in_csv = sorted(list(json_dates - csv_dates))
-    if missing_in_csv:
-        for d in missing_in_csv[:10]:
-            discrepancies.append(f"Missing date {d} in {source_label} (present in {target_label})")
-        if len(missing_in_csv) > 10:
-            discrepancies.append(f"... and {len(missing_in_csv) - 10} more dates missing in {source_label}")
+    if historical_missing_in_csv:
+        for d in historical_missing_in_csv[:10]:
+            discrepancies.append(f"Historical date {d} missing in {source_label} (present in {target_label})")
+        if len(historical_missing_in_csv) > 10:
+            discrepancies.append(f"... and {len(historical_missing_in_csv) - 10} more dates missing in {source_label}")
+
+    if newer_ahead_dates:
+        print(f"ℹ️ {target_label} contains {len(newer_ahead_dates)} newer dates ahead of {source_label}: {newer_ahead_dates} (ingested directly from official GPF API).")
 
     # 3. Check chronological ordering of JSON records
     json_date_list = [r["date"] for r in json_records]

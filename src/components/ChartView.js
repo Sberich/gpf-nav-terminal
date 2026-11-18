@@ -278,8 +278,11 @@ export function calcEMA(data, period) {
 /**
  * Relative Strength Index (RSI) Calculation using Wilder's Smoothing
  */
-export function calcRSI(values, period = 14) {
-  if (!values || values.length <= period) return 50;
+export function calcRSISeries(values, period = 14) {
+  if (!values || values.length === 0) return [];
+  const rsi = new Array(values.length).fill(50);
+  if (values.length <= period) return rsi;
+
   let gains = 0, losses = 0;
   for (let i = 1; i <= period; i++) {
     const change = values[i] - values[i - 1];
@@ -288,21 +291,34 @@ export function calcRSI(values, period = 14) {
   }
   let avgGain = gains / period;
   let avgLoss = losses / period;
+  rsi[period] = avgLoss === 0 ? (avgGain > 0 ? 100 : 50) : (100 - (100 / (1 + (avgGain / avgLoss))));
+
   for (let i = period + 1; i < values.length; i++) {
     const change = values[i] - values[i - 1];
     const gain = change > 0 ? change : 0;
     const loss = change < 0 ? -change : 0;
     avgGain = ((avgGain * (period - 1)) + gain) / period;
     avgLoss = ((avgLoss * (period - 1)) + loss) / period;
+    if (avgLoss === 0) {
+      rsi[i] = avgGain > 0 ? 100 : 50;
+    } else {
+      const rs = avgGain / avgLoss;
+      rsi[i] = 100 - (100 / (1 + rs));
+    }
   }
-  if (avgLoss === 0) return avgGain > 0 ? 100 : 50;
-  const rs = avgGain / avgLoss;
-  return 100 - (100 / (1 + rs));
+  return rsi;
+}
+
+export function calcRSI(values, period = 14) {
+  if (!values || values.length <= period) return 50;
+  const series = calcRSISeries(values, period);
+  return series[series.length - 1] ?? 50;
 }
 
 /**
  * Technical Analysis Engine for a GPF plan
- * Computes Volatility, EMA(12), EMA(26), MACD Line, Signal(9), Histogram, RSI(14), and Golden/Dead Crosses
+ * Computes Volatility, EMA(12), EMA(26), EMA(20), EMA(50), MACD Line, Signal(9), Histogram, RSI(14),
+ * and Smart 3-Layer Filtered Tactical Signals (EMA + MACD + RSI with cooldown guard)
  */
 export function analyzePlanTechnical(chartData, planName) {
   if (!chartData || !chartData.series || !chartData.dates || !planName) return null;
@@ -330,7 +346,9 @@ export function analyzePlanTechnical(chartData, planName) {
       crosses: [],
       currentHist: 0,
       latestCross: null,
-      rsi: 50
+      rsi: 50,
+      ema20: [],
+      ema50: []
     };
   }
 
@@ -346,18 +364,49 @@ export function analyzePlanTechnical(chartData, planName) {
 
   const ema12 = calcEMA(values, 12);
   const ema26 = calcEMA(values, 26);
+  const ema20 = calcEMA(values, 20);
+  const ema50 = calcEMA(values, 50);
   const macd = values.map((_, i) => ema12[i] - ema26[i]);
   const signal = calcEMA(macd, 9);
   const hist = macd.map((v, i) => v - signal[i]);
-  const rsi = calcRSI(values, 14);
+  const rsiSeries = calcRSISeries(values, 14);
+  const rsi = rsiSeries[rsiSeries.length - 1] ?? 50;
 
-  // Identify Golden Cross (Hist: <=0 -> >0) and Dead Cross (Hist: >=0 -> <0)
+  // Smart 3-Layer Filter: Dual-EMA Trend + MACD Momentum + RSI Health + Cooldown Guard
   const crosses = [];
-  for (let i = 1; i < hist.length; i++) {
-    if (hist[i - 1] <= 0 && hist[i] > 0) {
+  let currentState = null; // 'golden' | 'dead'
+  let lastSignalIdx = -999;
+  const cooldown = 12; // 12 trading bars to eliminate noisy whipsaw signals
+
+  for (let i = 25; i < values.length; i++) {
+    const price = values[i];
+    const e20 = ema20[i];
+    const e50 = ema50[i];
+    const h = hist[i];
+    const r = rsiSeries[i];
+
+    const canSignal = (i - lastSignalIdx) >= cooldown;
+
+    // Buy condition (Golden Cross / สะสม):
+    // 1. Major Trend Alignment: EMA 20 is above or equal to EMA 50
+    // 2. Price confirmation: Price is above EMA 20
+    // 3. Momentum confirmation: MACD Histogram is positive (> 0)
+    // 4. Strength confirmation: RSI is healthy (>= 48)
+    const buyCond = (e20 >= e50) && (price >= e20) && (h > 0) && (r >= 48);
+
+    // Sell condition (Dead Cross / พักเงิน):
+    // 1. Major Trend Reversal: EMA 20 crosses below EMA 50, OR
+    // 2. Severe Breakdown: Price drops below EMA 50 with negative MACD Momentum (hist < 0)
+    const sellCond = (e20 < e50) || (price < e50 && h < 0);
+
+    if (currentState !== 'golden' && buyCond && canSignal) {
       crosses.push({ type: 'golden', date: dates[i], price: values[i], index: i });
-    } else if (hist[i - 1] >= 0 && hist[i] < 0) {
+      currentState = 'golden';
+      lastSignalIdx = i;
+    } else if (currentState === 'golden' && sellCond && canSignal) {
       crosses.push({ type: 'dead', date: dates[i], price: values[i], index: i });
+      currentState = 'dead';
+      lastSignalIdx = i;
     }
   }
 
@@ -371,6 +420,8 @@ export function analyzePlanTechnical(chartData, planName) {
     isUnreliable: false,
     ema12,
     ema26,
+    ema20,
+    ema50,
     macd,
     signal,
     hist,
@@ -759,6 +810,7 @@ export class ChartView {
     this.chartHeight = 450;
     this.chart = null;
     this.showSignalOverlay = (typeof localStorage !== 'undefined' ? localStorage.getItem('gpf_show_signals') !== 'false' : true);
+    this.showEma = (typeof localStorage !== 'undefined' ? localStorage.getItem('gpf_show_ema') !== 'false' : true);
     this.chartEngine = (typeof localStorage !== 'undefined' ? localStorage.getItem('gpf_chart_engine') || 'apex' : 'apex');
     this.tvChart = null;
     this.ApexCharts = options.ApexCharts || null;
@@ -846,6 +898,11 @@ export class ChartView {
               <span>🟢 สัญญาณซื้อ/ขาย</span>
             </button>
 
+            <!-- EMA Overlay Toggle Button -->
+            <button class="chart-action-btn ${this.showEma ? 'is-active' : ''}" id="btn-toggle-ema" title="เปิด/ปิด เส้นค่าเฉลี่ยแนวโน้ม EMA 20 (ทอง) / EMA 50 (ฟ้า) บนกราฟ">
+              <span>📈 EMA 20/50</span>
+            </button>
+
             <!-- TradingView Toggle Button -->
             <button class="chart-action-btn ${this.chartEngine === 'tradingview' ? 'is-active' : ''}" id="btn-toggle-engine" title="สลับการแสดงผลระหว่างกราฟ ApexCharts และ TradingView">
               <span>TradingView</span>
@@ -902,6 +959,13 @@ export class ChartView {
       signalBtn.addEventListener('click', this._handleClick);
     }
 
+    const emaBtn = this.container.querySelector
+      ? this.container.querySelector('#btn-toggle-ema')
+      : null;
+    if (emaBtn) {
+      emaBtn.addEventListener('click', this._handleClick);
+    }
+
     const engineBtn = this.container.querySelector
       ? this.container.querySelector('#btn-toggle-engine')
       : null;
@@ -912,11 +976,16 @@ export class ChartView {
 
   _handleClick(e) {
     const target = e.target || e;
-    const btn = target.closest ? target.closest('.timeframe-btn, .mode-btn, #btn-chart-autofit, #btn-toggle-signals, #btn-toggle-engine') : target;
+    const btn = target.closest ? target.closest('.timeframe-btn, .mode-btn, #btn-chart-autofit, #btn-toggle-signals, #btn-toggle-ema, #btn-toggle-engine') : target;
     if (!btn) return;
 
     if (btn.id === 'btn-toggle-signals' || (btn.closest && btn.closest('#btn-toggle-signals'))) {
       this.toggleSignalOverlay();
+      return;
+    }
+
+    if (btn.id === 'btn-toggle-ema' || (btn.closest && btn.closest('#btn-toggle-ema'))) {
+      this.toggleEma();
       return;
     }
 
@@ -1519,7 +1588,7 @@ export class ChartView {
       return;
     }
 
-    const isBullish = analysis.currentHist > 0;
+    const isBullish = analysis.latestCross ? analysis.latestCross.type === 'golden' : analysis.currentHist > 0;
     const lastCross = analysis.latestCross;
     let crossDetail = '';
     if (lastCross) {
@@ -1530,7 +1599,7 @@ export class ChartView {
     }
 
     bannerEl.innerHTML = `
-      <div class="signal-tag ${isBullish ? 'tag-buy' : 'tag-sell'}" title="${isBullish ? 'จังหวะเข้าสะสม (MACD เหนือ Signal)' : 'จังหวะชะลอ/พักเงิน (MACD ต่ำกว่า Signal)'}">
+      <div class="signal-tag ${isBullish ? 'tag-buy' : 'tag-sell'}" title="${isBullish ? 'จังหวะเข้าสะสม (EMA + MACD + RSI ยืนยันรอบขาขึ้น)' : 'จังหวะชะลอ/พักเงิน (หลุดแนวโน้ม EMA20 / ต่ำกว่า Signal)'}">
         ${isBullish ? '🟢 ซื้อ (สะสม)' : '🔴 ขาย (พักเงิน)'}
       </div>
       <div class="signal-metrics-row">
@@ -1540,6 +1609,29 @@ export class ChartView {
         <span class="signal-rsi">RSI: <strong>${analysis.rsi.toFixed(1)}</strong></span>
       </div>
     `;
+  }
+
+  toggleEma() {
+    this.showEma = !this.showEma;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('gpf_show_ema', String(this.showEma));
+    }
+    const btn = this.container ? this.container.querySelector('#btn-toggle-ema') : null;
+    if (btn) {
+      if (this.showEma) {
+        btn.classList.add('is-active');
+      } else {
+        btn.classList.remove('is-active');
+      }
+    }
+    if (this.chartEngine === 'tradingview') {
+      this.renderTradingViewChart();
+    }
+    if (this.showEma) {
+      showToast('📈 เปิดเส้นค่าเฉลี่ย EMA 20 / EMA 50 เรียบร้อย');
+    } else {
+      showToast('📈 ปิดเส้นค่าเฉลี่ย EMA เรียบร้อย');
+    }
   }
 
   toggleSignalOverlay() {
@@ -1617,6 +1709,7 @@ export class ChartView {
         primaryPlan: this.primaryPlan,
         activePlans: this.activePlans,
         showSignals: this.showSignalOverlay,
+        showEma: this.showEma,
         onDoubleTapPin: (plan, price) => {
           pinService.addPin(plan, price, 'ดับเบิลคลิกจาก TradingView');
           showToast(`📌 ปักหมุด ${plan} ที่ราคา ${price.toFixed(4)} เรียบร้อย`);
@@ -1639,6 +1732,7 @@ export class ChartView {
       timeframe: this.currentTimeframe,
       theme: this.currentTheme,
       showSignals: this.showSignalOverlay,
+      showEma: this.showEma,
       analysis,
       pins
     });
@@ -1718,6 +1812,7 @@ export default {
   DEFAULT_PLAN_COLORS,
   calcEMA,
   calcRSI,
+  calcRSISeries,
   analyzePlanTechnical,
   buildMacdSubChartOptions
 };

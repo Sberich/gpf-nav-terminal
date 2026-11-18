@@ -31,6 +31,7 @@ export class TradingViewChart {
     this.secondarySeriesList = [];
     this.markersPrimitive = null;
     this.priceLines = [];
+    this.curveBadgeEl = null;
     this.legendEl = null;
     this.wrapperEl = null;
     this.renderEl = null;
@@ -41,6 +42,9 @@ export class TradingViewChart {
     this.primaryPlan = options.primaryPlan || 'แผนเชิงรุก 35';
     this.activePlans = new Set(options.activePlans || ['แผนเชิงรุก 35']);
     this.showSignals = options.showSignals !== false;
+    this.showEma = options.showEma !== false;
+    this.ema20Series = null;
+    this.ema50Series = null;
 
     this._lastClickTime = 0;
     this._onChartClick = this._onChartClick.bind(this);
@@ -86,12 +90,33 @@ export class TradingViewChart {
           color: rgba(156, 163, 175, 0.35);
           letter-spacing: 0.5px;
         ">TradingView · Lightweight Charts</div>
+        <!-- On-Curve Floating Price Badge (Follows hovered point directly on the line) -->
+        <div class="tv-curve-badge" style="
+          position: absolute;
+          display: none;
+          z-index: 25;
+          pointer-events: none;
+          font-family: 'Sarabun', sans-serif;
+          font-size: 11.5px;
+          font-weight: 700;
+          line-height: 1.2;
+          padding: 3px 8px;
+          border-radius: 5px;
+          background: rgba(15, 23, 42, 0.94);
+          color: #ffffff;
+          border: 1.5px solid #10B981;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6), 0 0 10px rgba(16, 185, 129, 0.35);
+          transform: translate(-50%, calc(-100% - 16px));
+          white-space: nowrap;
+          transition: transform 0.05s ease-out;
+        "></div>
         <div class="tv-render-canvas" style="width: 100%; height: 100%; min-height: 480px;"></div>
       </div>
     `;
 
     this.wrapperEl = this.container.querySelector('.tv-wrapper');
     this.legendEl = this.container.querySelector('.tv-legend');
+    this.curveBadgeEl = this.container.querySelector('.tv-curve-badge');
     this.renderEl = this.container.querySelector('.tv-render-canvas');
 
     const isDark = this.currentTheme === 'dark';
@@ -112,7 +137,7 @@ export class TradingViewChart {
         horzLines: { color: gridColor }
       },
       crosshair: {
-        mode: CrosshairMode.Normal,
+        mode: CrosshairMode.Magnet,
         vertLine: {
           color: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.25)',
           width: 1,
@@ -146,6 +171,14 @@ export class TradingViewChart {
 
     this.chart.subscribeCrosshairMove(this._onCrosshairMove);
     this.chart.subscribeClick(this._onChartClick);
+
+    if (this.renderEl) {
+      this.renderEl.addEventListener('mouseleave', () => {
+        if (this.curveBadgeEl) {
+          this.curveBadgeEl.style.display = 'none';
+        }
+      });
+    }
   }
 
   /**
@@ -161,6 +194,7 @@ export class TradingViewChart {
     timeframe = '1Y',
     theme = 'dark',
     showSignals = true,
+    showEma = true,
     analysis = null,
     pins = []
   }) {
@@ -172,6 +206,7 @@ export class TradingViewChart {
     this.primaryPlan = primaryPlan || this.primaryPlan;
     this.activePlans = activePlans ? new Set(activePlans) : this.activePlans;
     this.showSignals = showSignals;
+    this.showEma = showEma;
     this.cachedAnalysis = analysis;
     this.cachedPins = pins;
     this.chartData = chartData;
@@ -186,6 +221,14 @@ export class TradingViewChart {
       try { this.chart.removeSeries(sec); } catch (e) {}
     }
     this.secondarySeriesList = [];
+    if (this.ema20Series) {
+      try { this.chart.removeSeries(this.ema20Series); } catch (e) {}
+      this.ema20Series = null;
+    }
+    if (this.ema50Series) {
+      try { this.chart.removeSeries(this.ema50Series); } catch (e) {}
+      this.ema50Series = null;
+    }
     this.markersPrimitive = null;
     this.priceLines = [];
 
@@ -281,6 +324,54 @@ export class TradingViewChart {
       this.secondarySeriesList.push(secSeries);
     }
 
+    // 2.5 Add Dual EMA Lines (EMA 20 Gold, EMA 50 Sky Blue) on primary plan in NAV mode
+    if (this.showEma && !isPct && analysis && analysis.ema20 && analysis.ema50 && analysis.dates) {
+      const ema20Points = [];
+      const ema50Points = [];
+      const primaryDatesSet = new Set(primaryData.map(d => d.time));
+
+      for (let i = 0; i < analysis.dates.length; i++) {
+        const dStr = analysis.dates[i];
+        if (!primaryDatesSet.has(dStr)) continue;
+
+        const val20 = analysis.ema20[i];
+        const val50 = analysis.ema50[i];
+
+        if (val20 != null && !isNaN(val20) && val20 > 0) {
+          ema20Points.push({ time: dStr, value: Number(val20.toFixed(4)) });
+        }
+        if (val50 != null && !isNaN(val50) && val50 > 0) {
+          ema50Points.push({ time: dStr, value: Number(val50.toFixed(4)) });
+        }
+      }
+
+      if (ema20Points.length > 0) {
+        this.ema20Series = this.chart.addSeries(LineSeries, {
+          color: '#f59e0b', // Gold / Amber
+          lineWidth: 1.5,
+          lineStyle: LineStyle.Solid,
+          priceLineVisible: false,
+          lastValueVisible: false,
+          crosshairMarkerVisible: false,
+          title: 'EMA 20'
+        });
+        this.ema20Series.setData(ema20Points);
+      }
+
+      if (ema50Points.length > 0) {
+        this.ema50Series = this.chart.addSeries(LineSeries, {
+          color: '#388bfd', // Sky Blue
+          lineWidth: 1.5,
+          lineStyle: LineStyle.Solid,
+          priceLineVisible: false,
+          lastValueVisible: false,
+          crosshairMarkerVisible: false,
+          title: 'EMA 50'
+        });
+        this.ema50Series.setData(ema50Points);
+      }
+    }
+
     // 3. Add Tactical Signal Markers (Overlay)
     if (this.showSignals && analysis && analysis.crosses && analysis.crosses.length > 0 && !analysis.isLowVol) {
       const markers = [];
@@ -368,6 +459,9 @@ export class TradingViewChart {
     if (!this.legendEl) return;
 
     if (!param || !param.time || !param.seriesData || !this.primarySeries) {
+      if (this.curveBadgeEl) {
+        this.curveBadgeEl.style.display = 'none';
+      }
       // Revert to latest data point
       if (this.chartData && this.chartData.dates) {
         const lastDate = this.chartData.dates[this.chartData.dates.length - 1];
@@ -382,6 +476,34 @@ export class TradingViewChart {
     const dateStr = typeof param.time === 'string' ? param.time : null;
     const val = data?.value ?? null;
     this.updateLegend(dateStr, val);
+
+    // Update on-curve floating badge right at the green dot (the hovered point on the line)
+    if (this.curveBadgeEl && val !== null && val !== undefined) {
+      const coordY = this.primarySeries.priceToCoordinate(val);
+      const coordX = param.point ? param.point.x : (this.chart?.timeScale() ? this.chart.timeScale().timeToCoordinate(param.time) : null);
+
+      if (coordX !== null && coordY !== null && !isNaN(coordX) && !isNaN(coordY)) {
+        const primaryColor = getPlanColor(this.primaryPlan, this.summaryData);
+        const isPct = this.currentMode === 'pct';
+        const formattedVal = isPct
+          ? `${val >= 0 ? '+' : ''}${val.toFixed(2)}%`
+          : `${val.toFixed(4)} ฿`;
+
+        // If too close to the top, flip badge below the dot with comfortable clearance
+        const isNearTop = coordY < 42;
+        this.curveBadgeEl.style.transform = isNearTop ? 'translate(-50%, 16px)' : 'translate(-50%, calc(-100% - 16px))';
+        this.curveBadgeEl.style.display = 'block';
+        this.curveBadgeEl.style.left = `${coordX}px`;
+        this.curveBadgeEl.style.top = `${coordY}px`;
+        this.curveBadgeEl.style.borderColor = primaryColor;
+        this.curveBadgeEl.style.boxShadow = `0 4px 14px rgba(0, 0, 0, 0.6), 0 0 10px ${this._hexToRgba(primaryColor, 0.45)}`;
+        this.curveBadgeEl.innerHTML = `<span style="color: ${primaryColor}; font-weight: 800;">${this.primaryPlan}</span>: <span>${formattedVal}</span>`;
+      } else {
+        this.curveBadgeEl.style.display = 'none';
+      }
+    } else if (this.curveBadgeEl) {
+      this.curveBadgeEl.style.display = 'none';
+    }
   }
 
   /**
@@ -429,6 +551,18 @@ export class TradingViewChart {
       }
     }
 
+    let emaBadge = '';
+    if (this.showEma && !isPct && this.cachedAnalysis?.ema20 && this.cachedAnalysis?.ema50 && dateStr) {
+      const idx = this.cachedAnalysis.dates?.indexOf(dateStr);
+      if (idx !== -1 && idx != null) {
+        const val20 = this.cachedAnalysis.ema20[idx];
+        const val50 = this.cachedAnalysis.ema50[idx];
+        if (val20 && val50) {
+          emaBadge = ` · <span style="color: #f59e0b; font-weight: 600;">EMA20: ${val20.toFixed(2)}</span> · <span style="color: #388bfd; font-weight: 600;">EMA50: ${val50.toFixed(2)}</span>`;
+        }
+      }
+    }
+
     this.legendEl.innerHTML = `
       <div style="display: flex; align-items: center; gap: 6px;">
         <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${primaryColor};"></span>
@@ -436,7 +570,7 @@ export class TradingViewChart {
         ${crossBadge}
       </div>
       <div style="color: var(--terminal-muted, #9ca3af); font-size: 11px;">
-        ราคา: <strong style="color: ${primaryColor}; font-size: 13px;">${valFormatted}</strong>
+        ราคา: <strong style="color: ${primaryColor}; font-size: 13px;">${valFormatted}</strong>${emaBadge}
         ${dateFormatted ? ` · วันที่: <span>${dateFormatted}</span>` : ''}
       </div>
     `;
@@ -531,6 +665,14 @@ export class TradingViewChart {
       } catch (err) {}
       this.chart = null;
     }
+    this.primarySeries = null;
+    this.secondarySeriesList = [];
+    this.ema20Series = null;
+    this.ema50Series = null;
+    this.markersPrimitive = null;
+    this.priceLines = [];
+    this.curveBadgeEl = null;
+    this.legendEl = null;
     if (this.container) {
       this.container.innerHTML = '';
     }
