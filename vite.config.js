@@ -9,13 +9,11 @@ function copyRootCompanionFiles() {
       const filesToCopy = [
         'gpfnav69.html',
         'gpfrobo.html',
-        'gpfnavrobo.html',
         'sw-port.js',
         'sw-robo.js',
         'manifest-port.json',
         'manifest-robo-v2.json',
-        'config.js',
-        '_redirects'
+        'config.js'
       ];
       const distDir = path.resolve(__dirname, 'dist');
       if (!fs.existsSync(distDir)) return;
@@ -46,7 +44,7 @@ export default defineConfig({
   plugins: [copyRootCompanionFiles()],
   build: {
     outDir: 'dist',
-    emptyOutDir: true,
+    emptyOutDir: false,
     chunkSizeWarningLimit: 650,
     rollupOptions: {
       output: {

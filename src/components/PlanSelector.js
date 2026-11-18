@@ -254,7 +254,12 @@ export class PlanSelector {
 
       const countEl = this.container.querySelector ? this.container.querySelector('.selected-count-badge') : null;
       if (countEl) {
-        countEl.textContent = `${this.activePlans.size}/15 แผน`;
+        const countNum = countEl.querySelector ? countEl.querySelector('.active-count') : null;
+        if (countNum) {
+          countNum.textContent = String(this.activePlans.size);
+        } else {
+          countEl.textContent = `${this.activePlans.size}/15 แผน`;
+        }
       }
     } else {
       this.render();
@@ -311,10 +316,20 @@ export class PlanSelector {
       <div class="plan-selector watchlist-sidebar-card animate-fade-in">
         <div class="watchlist-header">
           <div class="watchlist-title-row">
-            <span class="watchlist-title">กระดานราคา (WATCHLIST)</span>
-            <span class="selected-count-badge">${this.activePlans.size}/15 แผน</span>
+            <div class="watchlist-title-group">
+              <span class="watchlist-title-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 3v18h18"></path>
+                  <path d="M18 9l-5 5-4-4-3 3"></path>
+                </svg>
+              </span>
+              <span class="watchlist-title rainbow-anim">แผนการลงทุน</span>
+            </div>
+            <div class="selected-count-badge" id="watchlist-count-badge" title="จำนวนแผนที่เปิดแสดงในกราฟ">
+              <span class="count-pulse-dot"></span>
+              <span class="count-text"><span class="active-count">${this.activePlans.size}</span>/15 แผน</span>
+            </div>
           </div>
-          <div class="watchlist-hint">คลิกชื่อเพื่อเปลี่ยนแผนหลัก หรือติ๊กถูกเพื่อเทียบกราฟ</div>
         </div>
 
         <div class="plan-categories-list watchlist-scroll-area plan-pills-list">

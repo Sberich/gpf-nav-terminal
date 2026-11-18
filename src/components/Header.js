@@ -69,21 +69,15 @@ export function renderHeader(container) {
     <header class="app-header">
       <div class="header-container">
         <div class="header-brand">
-          <div class="logo-badge" title="กองทุนบำเหน็จบำนาญข้าราชการ">GPF</div>
-          <div class="title-group">
-            <div class="logo-title-row">
-              <h1 class="logo-title">GPF NAV</h1>
-              <span class="live-badge" id="btn-open-terminal-status" title="คลิกเพื่อดูสถานะระบบและข้อมูล NAV ล่าสุด">
-                <span class="live-dot"></span>
-                <span>TERMINAL</span>
-              </span>
-            </div>
-            <div class="logo-sub-row">
-              <div class="header-update-badge" id="header-update-badge" title="วันทำการล่าสุดที่มีการสรุปข้อมูล NAV">
-                <span class="update-pulse-dot"></span>
-                <span id="header-update-text">อัปเดต: วันทำการล่าสุด</span>
-              </div>
-            </div>
+          <img src="/GPFLogo.png" class="brand-logo-img logo-badge" id="brand-logo-img" alt="GPF Logo" title="กองทุนบำเหน็จบำนาญข้าราชการ (กบข.)" />
+          <h1 class="logo-title" title="GPF NAV Terminal">NAV</h1>
+          <span class="live-badge" id="btn-open-terminal-status" title="คลิกเพื่อดูสถานะระบบและข้อมูล NAV ล่าสุด">
+            <span class="live-dot"></span>
+            <span>TERMINAL</span>
+          </span>
+          <div class="header-update-badge" id="header-update-badge" title="วันทำการล่าสุดที่มีการสรุปข้อมูล NAV">
+            <span class="update-pulse-dot"></span>
+            <span id="header-update-text">อัปเดต: วันทำการล่าสุด</span>
           </div>
         </div>
 
