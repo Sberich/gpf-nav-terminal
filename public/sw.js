@@ -1,13 +1,13 @@
 /**
  * GPF NAV Dashboard - Service Worker
- * Version: gpf-nav-v2
+ * Version: gpf-nav-v3
  * Features:
  * - Network-first for HTML navigation requests (always load fresh UI)
  * - Network-first for /data/*.json with cache fallback when offline
  * - Cache-first for static assets (fonts, icons, styles, scripts)
  */
 
-const CACHE_NAME = 'gpf-nav-v2';
+const CACHE_NAME = 'gpf-nav-v3';
 
 const APP_SHELL_ASSETS = [
   '/',
@@ -15,7 +15,8 @@ const APP_SHELL_ASSETS = [
   '/manifest.json',
   '/favicon.svg',
   '/favicon.png',
-  '/icon.png'
+  '/icon.png',
+  '/GPFLogo.png'
 ];
 
 self.addEventListener('install', (event) => {
