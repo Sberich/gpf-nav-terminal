@@ -968,16 +968,13 @@ export class ChartView {
               <!-- Strategy Selector Group -->
               <div class="strategy-selector-group" role="group" aria-label="เลือกกลยุทธ์การลงทุน">
                 <button class="strategy-btn ${this.strategyMode === 'swing' ? 'is-active' : ''}" id="btn-strategy-swing" title="กลยุทธ์สวิงเทรดรอบสั้น 1-3 เดือน (EMA 20/50 + MACD)">
-                  <span class="btn-label-desktop">⚡ สวิงเทรด (20/50)</span>
-                  <span class="btn-label-mobile">⚡ สวิง (20/50)</span>
+                  <span>⚡ สวิงเทรด</span>
                 </button>
                 <button class="strategy-btn is-trend ${this.strategyMode === 'trend' ? 'is-active' : ''}" id="btn-strategy-trend" title="กลยุทธ์รันเทรนด์ใหญ่รอบ 6-12 เดือน (EMA 100/200)">
-                  <span class="btn-label-desktop">🌊 รันเทรนด์ (100/200)</span>
-                  <span class="btn-label-mobile">🌊 เทรนด์ (100/200)</span>
+                  <span>🌊 รันเทรนด์</span>
                 </button>
                 <button class="strategy-btn" id="btn-open-momentum" title="ตารางจัดอันดับโมเมนตัม 15 แผน กบข. (3M / 6M / 12M)">
-                  <span class="btn-label-desktop">🏆 โมเมนตัม 15 แผน</span>
-                  <span class="btn-label-mobile">🏆 โมเมนตัม</span>
+                  <span>🏆 โมเมนตัม</span>
                 </button>
               </div>
 
@@ -988,8 +985,7 @@ export class ChartView {
               <div class="chart-tools-group" role="group" aria-label="อินดิเคเตอร์และเครื่องมือ">
                 <!-- Signal Overlay Toggle Button -->
                 <button class="chart-action-btn ${this.showSignalOverlay ? 'is-active' : ''}" id="btn-toggle-signals" title="เปิด/ปิด จุดสัญญาณซื้อขาย (Overlay) บนเส้นกราฟ">
-                  <span class="btn-label-desktop">🟢 สัญญาณซื้อ/ขาย</span>
-                  <span class="btn-label-mobile">🟢 สัญญาณ</span>
+                  <span>🟢 สัญญาณ</span>
                 </button>
 
                 <!-- EMA Overlay Toggle Button -->
