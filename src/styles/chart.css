@@ -25,13 +25,9 @@
   gap: 8px;
   margin-bottom: 6px;
   min-height: 28px;
-}
-
-@media (max-width: 1024px) {
-  .chart-header {
-    flex-wrap: wrap;
-    gap: 6px;
-  }
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .chart-title-area {
@@ -53,6 +49,40 @@
   gap: 5px;
   margin-left: auto;
   flex-shrink: 0;
+}
+
+/* Responsive labels */
+.btn-label-desktop {
+  display: inline;
+}
+
+.btn-label-mobile {
+  display: none;
+}
+
+/* Category Actions Scroll Container */
+.chart-actions-scroll {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.chart-tools-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+
+[data-theme="light"] .toolbar-divider {
+  background: rgba(0, 0, 0, 0.12);
 }
 
 /* Mode Toggle: NAV จริง vs % เปลี่ยนแปลง */
@@ -555,37 +585,136 @@
   color: var(--text) !important;
 }
 
-/* Mobile responsive height (< 768px) */
-@media (max-width: 768px) {
+/* Mobile responsive layout (<= 1024px) */
+@media (max-width: 1024px) {
+  .btn-label-desktop {
+    display: none !important;
+  }
+
+  .btn-label-mobile {
+    display: inline !important;
+  }
+
   .chart-subtitle {
     display: none !important;
   }
 
   .chart-wrapper {
-    padding: 10px;
+    padding: 6px 8px;
   }
 
   .chart-header {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
+    align-items: stretch;
+    gap: 5px;
+    margin-bottom: 4px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  /* Compact Signal Banner on Mobile */
+  .macd-signal-banner {
+    padding: 3px 8px;
+    font-size: 11px;
+    line-height: 1.35;
+    gap: 5px;
+    border-radius: var(--radius-sm);
   }
 
   .chart-toolbar {
     width: 100%;
-    justify-content: space-between;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 5px;
+    margin-left: 0;
+    overflow: hidden;
   }
 
+  /* Row 1: Timeframe Group */
   .timeframe-group {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    display: flex;
     justify-content: space-between;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 2px;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .timeframe-group::-webkit-scrollbar {
+    display: none;
   }
 
   .timeframe-btn {
-    padding: 3px 6px;
+    padding: 3px 5px;
     font-size: 10.5px;
     flex: 1;
+    min-width: 28px;
     text-align: center;
+  }
+
+  /* Row 2: Category Actions Scroll - Horizontal scrolling swipeable bar */
+  .chart-actions-scroll {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 2px 14px 4px 2px;
+    scroll-behavior: smooth;
+    flex-shrink: 0;
+  }
+  .chart-actions-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .strategy-selector-group {
+    flex-shrink: 0;
+    padding: 1px 2px;
+    gap: 2px;
+  }
+
+  .chart-tools-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .strategy-btn,
+  .chart-action-btn {
+    flex-shrink: 0;
+    font-size: 10.5px;
+    padding: 3px 7px;
+    gap: 3px;
+  }
+
+  .toolbar-divider {
+    height: 15px;
+    background: rgba(255, 255, 255, 0.15);
+    margin: 0 2px;
+  }
+
+  [data-theme="light"] .toolbar-divider {
+    background: rgba(0, 0, 0, 0.15);
   }
 
   .chart-render-area {

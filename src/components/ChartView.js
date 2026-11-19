@@ -958,43 +958,58 @@ export class ChartView {
           <div class="macd-signal-banner" id="macd-signal-banner" style="display: ${this.showSignalOverlay ? 'flex' : 'none'};"></div>
 
           <div class="chart-toolbar">
-            <!-- Timeframe Group -->
+            <!-- Timeframe Group: Row 1 on mobile -->
             <div class="timeframe-group" role="group" aria-label="ช่วงเวลาแสดงผล">
               ${btnsHtml}
             </div>
 
-            <!-- Strategy Selector Group -->
-            <div class="strategy-selector-group" role="group" aria-label="เลือกกลยุทธ์การลงทุน">
-              <button class="strategy-btn ${this.strategyMode === 'swing' ? 'is-active' : ''}" id="btn-strategy-swing" title="กลยุทธ์สวิงเทรดรอบสั้น 1-3 เดือน (EMA 20/50 + MACD)">
-                <span>⚡ สวิงเทรด (20/50)</span>
-              </button>
-              <button class="strategy-btn is-trend ${this.strategyMode === 'trend' ? 'is-active' : ''}" id="btn-strategy-trend" title="กลยุทธ์รันเทรนด์ใหญ่รอบ 6-12 เดือน (EMA 100/200)">
-                <span>🌊 รันเทรนด์ (100/200)</span>
-              </button>
-              <button class="strategy-btn" id="btn-open-momentum" title="ตารางจัดอันดับโมเมนตัม 15 แผน กบข. (3M / 6M / 12M)">
-                <span>🏆 โมเมนตัม 15 แผน</span>
-              </button>
+            <!-- Category Actions Scroll: Row 2 on mobile (Horizontal Scrollable) -->
+            <div class="chart-actions-scroll" role="toolbar" aria-label="เครื่องมือและกลยุทธ์กราฟ">
+              <!-- Strategy Selector Group -->
+              <div class="strategy-selector-group" role="group" aria-label="เลือกกลยุทธ์การลงทุน">
+                <button class="strategy-btn ${this.strategyMode === 'swing' ? 'is-active' : ''}" id="btn-strategy-swing" title="กลยุทธ์สวิงเทรดรอบสั้น 1-3 เดือน (EMA 20/50 + MACD)">
+                  <span class="btn-label-desktop">⚡ สวิงเทรด (20/50)</span>
+                  <span class="btn-label-mobile">⚡ สวิง (20/50)</span>
+                </button>
+                <button class="strategy-btn is-trend ${this.strategyMode === 'trend' ? 'is-active' : ''}" id="btn-strategy-trend" title="กลยุทธ์รันเทรนด์ใหญ่รอบ 6-12 เดือน (EMA 100/200)">
+                  <span class="btn-label-desktop">🌊 รันเทรนด์ (100/200)</span>
+                  <span class="btn-label-mobile">🌊 เทรนด์ (100/200)</span>
+                </button>
+                <button class="strategy-btn" id="btn-open-momentum" title="ตารางจัดอันดับโมเมนตัม 15 แผน กบข. (3M / 6M / 12M)">
+                  <span class="btn-label-desktop">🏆 โมเมนตัม 15 แผน</span>
+                  <span class="btn-label-mobile">🏆 โมเมนตัม</span>
+                </button>
+              </div>
+
+              <!-- Category Divider -->
+              <div class="toolbar-divider" aria-hidden="true"></div>
+
+              <!-- Indicators & Tools Group -->
+              <div class="chart-tools-group" role="group" aria-label="อินดิเคเตอร์และเครื่องมือ">
+                <!-- Signal Overlay Toggle Button -->
+                <button class="chart-action-btn ${this.showSignalOverlay ? 'is-active' : ''}" id="btn-toggle-signals" title="เปิด/ปิด จุดสัญญาณซื้อขาย (Overlay) บนเส้นกราฟ">
+                  <span class="btn-label-desktop">🟢 สัญญาณซื้อ/ขาย</span>
+                  <span class="btn-label-mobile">🟢 สัญญาณ</span>
+                </button>
+
+                <!-- EMA Overlay Toggle Button -->
+                <button class="chart-action-btn ${this.showEma ? 'is-active' : ''}" id="btn-toggle-ema" title="เปิด/ปิด เส้นค่าเฉลี่ยแนวโน้มบนกราฟ">
+                  <span class="btn-label-desktop">📈 ${this.strategyMode === 'trend' ? 'EMA 100/200' : 'EMA 20/50'}</span>
+                  <span class="btn-label-mobile">📈 ${this.strategyMode === 'trend' ? 'EMA 100/200' : 'EMA 20/50'}</span>
+                </button>
+
+                <!-- TradingView Toggle Button -->
+                <button class="chart-action-btn ${this.chartEngine === 'tradingview' ? 'is-active' : ''}" id="btn-toggle-engine" title="สลับการแสดงผลระหว่างกราฟ ApexCharts และ TradingView">
+                  <span>TradingView</span>
+                </button>
+
+                <!-- Chart Auto-Fit Height Toggle -->
+                <button class="chart-action-btn ${this.isAutoFit ? 'is-active' : ''}" id="btn-chart-autofit" title="ขยายกราฟให้พอดีความสูงหน้าจอ (Auto-Fit) หรือคืนค่าขนาดเดิม">
+                  <span class="btn-label-desktop">${this.isAutoFit ? '↕ ขนาดมาตรฐาน' : '⛶ พอดีหน้าจอ'}</span>
+                  <span class="btn-label-mobile">${this.isAutoFit ? '↕ ปกติ' : '⛶ พอดีจอ'}</span>
+                </button>
+              </div>
             </div>
-
-            <!-- Signal Overlay Toggle Button -->
-            <button class="chart-action-btn ${this.showSignalOverlay ? 'is-active' : ''}" id="btn-toggle-signals" title="เปิด/ปิด จุดสัญญาณซื้อขาย (Overlay) บนเส้นกราฟ">
-              <span>🟢 สัญญาณซื้อ/ขาย</span>
-            </button>
-
-            <!-- EMA Overlay Toggle Button -->
-            <button class="chart-action-btn ${this.showEma ? 'is-active' : ''}" id="btn-toggle-ema" title="เปิด/ปิด เส้นค่าเฉลี่ยแนวโน้มบนกราฟ">
-              <span>📈 ${this.strategyMode === 'trend' ? 'EMA 100/200' : 'EMA 20/50'}</span>
-            </button>
-
-            <!-- TradingView Toggle Button -->
-            <button class="chart-action-btn ${this.chartEngine === 'tradingview' ? 'is-active' : ''}" id="btn-toggle-engine" title="สลับการแสดงผลระหว่างกราฟ ApexCharts และ TradingView">
-              <span>TradingView</span>
-            </button>
-
-            <!-- Chart Auto-Fit Height Toggle -->
-            <button class="chart-action-btn ${this.isAutoFit ? 'is-active' : ''}" id="btn-chart-autofit" title="ขยายกราฟให้พอดีความสูงหน้าจอ (Auto-Fit) หรือคืนค่าขนาดเดิม">
-              <span>${this.isAutoFit ? '↕ ขนาดมาตรฐาน' : '⛶ พอดีหน้าจอ'}</span>
-            </button>
           </div>
         </div>
 
@@ -1395,10 +1410,16 @@ export class ChartView {
     if (fitBtn) {
       if (this.isAutoFit) {
         fitBtn.classList.add('is-active');
-        fitBtn.innerHTML = '<span>↕ ขนาดมาตรฐาน</span>';
+        fitBtn.innerHTML = `
+          <span class="btn-label-desktop">↕ ขนาดมาตรฐาน</span>
+          <span class="btn-label-mobile">↕ ปกติ</span>
+        `;
       } else {
         fitBtn.classList.remove('is-active');
-        fitBtn.innerHTML = '<span>⛶ พอดีหน้าจอ</span>';
+        fitBtn.innerHTML = `
+          <span class="btn-label-desktop">⛶ พอดีหน้าจอ</span>
+          <span class="btn-label-mobile">⛶ พอดีจอ</span>
+        `;
       }
     }
 
@@ -1463,7 +1484,10 @@ export class ChartView {
       const fitBtn = this.container?.querySelector ? this.container.querySelector('#btn-chart-autofit') : null;
       if (fitBtn) {
         fitBtn.classList.remove('is-active');
-        fitBtn.innerHTML = '<span>⛶ พอดีหน้าจอ</span>';
+        fitBtn.innerHTML = `
+          <span class="btn-label-desktop">⛶ พอดีหน้าจอ</span>
+          <span class="btn-label-mobile">⛶ พอดีจอ</span>
+        `;
       }
       if (this.chart && typeof this.chart.updateOptions === 'function') {
         this.chart.updateOptions({ chart: { height: newHeight } }, false, false);
@@ -1775,7 +1799,11 @@ export class ChartView {
     if (swingBtn) swingBtn.classList.toggle('is-active', mode === 'swing');
     if (trendBtn) trendBtn.classList.toggle('is-active', mode === 'trend');
     if (emaBtn) {
-      emaBtn.innerHTML = `<span>📈 ${mode === 'trend' ? 'EMA 100/200' : 'EMA 20/50'}</span>`;
+      const emaLabel = mode === 'trend' ? 'EMA 100/200' : 'EMA 20/50';
+      emaBtn.innerHTML = `
+        <span class="btn-label-desktop">📈 ${emaLabel}</span>
+        <span class="btn-label-mobile">📈 ${emaLabel}</span>
+      `;
     }
 
     this.updateMacdSignalBanner();
