@@ -30,6 +30,7 @@ export class PinModal {
 
     this._handleKeyDown = this._handleKeyDown.bind(this);
     this._handlePinsChanged = this._handlePinsChanged.bind(this);
+    this._handleOpenPinModal = (e) => this.open(e?.detail?.plan || null);
 
     this.render();
     this.bindEvents();
@@ -212,7 +213,7 @@ export class PinModal {
     // Global listener for pins-changed to auto refresh UI
     if (typeof document !== 'undefined') {
       document.addEventListener('pins-changed', this._handlePinsChanged);
-      document.addEventListener('open-pin-modal', () => this.open());
+      document.addEventListener('open-pin-modal', this._handleOpenPinModal);
     }
   }
 
@@ -365,6 +366,7 @@ export class PinModal {
   destroy() {
     if (typeof document !== 'undefined') {
       document.removeEventListener('pins-changed', this._handlePinsChanged);
+      document.removeEventListener('open-pin-modal', this._handleOpenPinModal);
       document.removeEventListener('keydown', this._handleKeyDown);
     }
   }

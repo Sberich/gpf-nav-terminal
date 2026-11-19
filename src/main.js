@@ -288,6 +288,17 @@ async function initComponents() {
       }
     });
 
+    // Connect select-primary-plan (e.g. from Momentum Leaderboard)
+    document.addEventListener('select-primary-plan', (event) => {
+      const targetPlan = event.detail?.plan;
+      if (targetPlan && planSelectorInstance) {
+        planSelectorInstance.setPrimaryPlan(targetPlan);
+      } else if (targetPlan) {
+        if (metricCardsInstance) metricCardsInstance.setPlan(targetPlan);
+        if (chartViewInstance) chartViewInstance.setPrimaryPlan(targetPlan);
+      }
+    });
+
     // Theme reactivity for ChartView
     const themeBtn = document.getElementById('theme-toggle');
     if (themeBtn) {

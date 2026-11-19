@@ -234,19 +234,25 @@ def calculate_returns(
     if not records:
         return metrics
 
-    latest_rec = records[-1]
-    latest_nav = latest_rec["plans"].get(plan_name)
-    if latest_nav is None or latest_nav <= 0.0:
+    valid_plan_records = [
+        r
+        for r in records
+        if r["plans"].get(plan_name) is not None and r["plans"][plan_name] > 0.0
+    ]
+    if not valid_plan_records:
         return metrics
+
+    latest_rec = valid_plan_records[-1]
+    latest_nav = latest_rec["plans"][plan_name]
 
     try:
         latest_date = datetime.date.fromisoformat(latest_rec["date"])
     except ValueError:
         return metrics
 
-    # 1. 1D return (relative to immediately preceding trading day)
-    if len(records) >= 2:
-        prev_rec = records[-2]
+    # 1. 1D return (relative to immediately preceding trading day with valid NAV)
+    if len(valid_plan_records) >= 2:
+        prev_rec = valid_plan_records[-2]
         prev_nav = prev_rec["plans"].get(plan_name)
         if prev_nav is not None and prev_nav > 0.0:
             metrics["1D"] = round(((latest_nav - prev_nav) / prev_nav) * 100.0, 2)
@@ -313,8 +319,20 @@ def generate_nav_summary(
         category = PLAN_CATEGORIES.get(plan, "special")
         color = PLAN_COLORS.get(plan, "#888888")
 
-        latest_nav = latest_rec["plans"].get(plan)
-        prev_nav = prev_rec["plans"].get(plan) if prev_rec else None
+        # Find latest available non-null record for this specific plan
+        plan_records = [
+            r
+            for r in records
+            if r["plans"].get(plan) is not None and r["plans"][plan] > 0.0
+        ]
+        if plan_records:
+            plan_latest_rec = plan_records[-1]
+            latest_nav = plan_latest_rec["plans"][plan]
+            plan_prev_rec = plan_records[-2] if len(plan_records) >= 2 else None
+            prev_nav = plan_prev_rec["plans"][plan] if plan_prev_rec else None
+        else:
+            latest_nav = None
+            prev_nav = None
 
         change: Optional[float] = None
         change_pct: Optional[float] = None
@@ -448,26 +466,68 @@ def generate_nav_chart(
     }
 
 
+def upsert_records(
+    existing_records: List[Dict], incoming_records: List[Dict]
+) -> Tuple[List[Dict], int, int]:
+    """Upsert incoming records into existing records.
+
+    1. Appends new dates strictly newer or missing in existing records.
+    2. Updates past dates (within lookback window) if any plan had None or if GPF updated values.
+
+    Returns:
+        (updated_records, count_added, count_updated)
+    """
+    if not incoming_records:
+        return existing_records, 0, 0
+    if not existing_records:
+        sorted_inc = sorted(incoming_records, key=lambda r: r["date"])
+        return sorted_inc, len(sorted_inc), 0
+
+    existing_map = {r["date"]: dict(r) for r in existing_records}
+    for d, rec in existing_map.items():
+        rec["plans"] = dict(rec.get("plans", {}))
+
+    latest_existing_date = existing_records[-1]["date"] if existing_records else ""
+    count_added = 0
+    count_updated = 0
+
+    for inc in incoming_records:
+        dt = inc["date"]
+        inc_plans = inc.get("plans", {})
+
+        if dt > latest_existing_date:
+            if dt not in existing_map:
+                existing_map[dt] = {
+                    "date": dt,
+                    "plans": dict(inc_plans)
+                }
+                count_added += 1
+        elif dt in existing_map:
+            # Check if any plan in existing record was None or updated by GPF
+            cur_plans = existing_map[dt]["plans"]
+            row_updated = False
+            for p, new_val in inc_plans.items():
+                if new_val is not None and isinstance(new_val, (int, float)) and new_val > 0.0:
+                    old_val = cur_plans.get(p)
+                    if old_val is None or (isinstance(old_val, (int, float)) and abs(old_val - new_val) > 1e-4):
+                        cur_plans[p] = round(float(new_val), 4)
+                        row_updated = True
+            if row_updated:
+                count_updated += 1
+
+    updated_records = sorted(list(existing_map.values()), key=lambda r: r["date"])
+    return updated_records, count_added, count_updated
+
+
 def ingest_new_records(
     existing_records: List[Dict], csv_content: str
 ) -> Tuple[List[Dict], int]:
-    """Parse upstream CSV and append only records with dates strictly newer than existing latest date."""
+    """Parse upstream CSV and upsert records into existing history."""
     parsed_records = parse_csv_content(csv_content)
     if not parsed_records:
         return existing_records, 0
-
-    if not existing_records:
-        return parsed_records, len(parsed_records)
-
-    latest_existing_date = existing_records[-1]["date"]
-    new_candidates = [r for r in parsed_records if r["date"] > latest_existing_date]
-
-    if not new_candidates:
-        return existing_records, 0
-
-    updated = list(existing_records) + new_candidates
-    updated.sort(key=lambda r: r["date"])
-    return updated, len(new_candidates)
+    updated, added, updated_cnt = upsert_records(existing_records, parsed_records)
+    return updated, added
 
 
 def save_json_synced(path: str, data: any) -> None:
@@ -524,15 +584,7 @@ def update_nav(
             print(f"Notice: Direct GPF API fetch encountered: {e}. Falling back to Google Sheet CSV.", file=sys.stderr)
 
     if direct_records:
-        latest_existing_date = existing_records[-1]["date"] if existing_records else ""
-        new_candidates = [r for r in direct_records if r["date"] > latest_existing_date]
-        if new_candidates:
-            updated_records = list(existing_records) + new_candidates
-            updated_records.sort(key=lambda r: r["date"])
-            count_added = len(new_candidates)
-        else:
-            updated_records = existing_records
-            count_added = 0
+        updated_records, count_added, count_updated = upsert_records(existing_records, direct_records)
     else:
         # Fallback to upstream Google Sheet CSV
         if csv_file is not None:
@@ -542,18 +594,20 @@ def update_nav(
         else:
             print(f"Fetching upstream CSV from fallback: {csv_url}")
             csv_content = fetch_google_sheet_csv(csv_url)
-        updated_records, count_added = ingest_new_records(existing_records, csv_content)
+        parsed_records = parse_csv_content(csv_content)
+        updated_records, count_added, count_updated = upsert_records(existing_records, parsed_records)
 
-    if count_added > 0:
-        print(f"Ingested {count_added} new records (latest: {updated_records[-1]['date']}).")
+    total_changes = count_added + count_updated
+    if total_changes > 0:
+        print(f"Upserted records: {count_added} added, {count_updated} updated (latest: {updated_records[-1]['date']}).")
         save_json_synced(history_path, updated_records)
     else:
         latest_date = updated_records[-1]["date"] if updated_records else "N/A"
         print(f"NAV history is already up to date. Latest date: {latest_date}.")
 
-    # Idempotency check: If no new data rows detected and not forced, skip overwriting files
-    if count_added == 0 and not force and os.path.exists(summary_path):
-        print("ℹ️ No new data rows detected. Files unchanged.")
+    # Idempotency check: If no new data rows or updates detected and not forced, skip overwriting files
+    if total_changes == 0 and not force and os.path.exists(summary_path):
+        print("ℹ️ No new data rows or updates detected. Files unchanged.")
         chart_count = 0
         if os.path.exists(chart_path):
             try:
@@ -607,6 +661,7 @@ def update_nav(
     return {
         "status": "success",
         "records_added": count_added,
+        "records_updated": count_updated,
         "total_records": len(updated_records),
         "latest_date": updated_records[-1]["date"] if updated_records else None,
         "chart_points": chart_data["count"],

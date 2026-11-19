@@ -8,6 +8,20 @@
 import navService, { fetchChartData, fetchFullHistory, fetchSummary } from '../services/navService.js';
 import pinService from '../services/pinService.js';
 import { TradingViewChart } from './TradingViewChart.js';
+import { MomentumModal, renderMomentumModal } from './MomentumModal.js';
+
+export const DEFENSIVE_PLANS = new Set([
+  'แผนเงินฝากและตราสารหนี้ระยะสั้น',
+  'แผนตราสารหนี้',
+  'แผนตราสารหนี้ต่างประเทศ',
+  'แผนตราสารหนี้ไทย',
+  'แผนตลาดเงิน'
+]);
+
+export function isDefensiveAsset(planName) {
+  if (!planName) return false;
+  return DEFENSIVE_PLANS.has(planName);
+}
 
 /**
  * Toast Notification Utility
@@ -317,10 +331,13 @@ export function calcRSI(values, period = 14) {
 
 /**
  * Technical Analysis Engine for a GPF plan
- * Computes Volatility, EMA(12), EMA(26), EMA(20), EMA(50), MACD Line, Signal(9), Histogram, RSI(14),
- * and Smart 3-Layer Filtered Tactical Signals (EMA + MACD + RSI with cooldown guard)
+ * Computes Volatility, EMA(12), EMA(26), EMA(20), EMA(50), EMA(100), EMA(200),
+ * MACD Line, Signal(9), Histogram, RSI(14), and Smart Tactical Signals:
+ * - 'swing' strategy: EMA 20/50 + MACD Histogram + RSI Health with 12-bar cooldown
+ * - 'trend' strategy: Macro Trend Following with EMA 100/200 and 15-bar cooldown
+ * - Suppresses noisy buy/sell signals on low-volatility and defensive assets (Bond / Cash)
  */
-export function analyzePlanTechnical(chartData, planName) {
+export function analyzePlanTechnical(chartData, planName, strategy = 'swing') {
   if (!chartData || !chartData.series || !chartData.dates || !planName) return null;
   const s = chartData.series.find(x => x.name === planName || x.name?.includes(planName));
   if (!s || !s.data) return null;
@@ -335,20 +352,28 @@ export function analyzePlanTechnical(chartData, planName) {
     }
   }
 
-  if (values.length < 35) {
+  const isTrend = strategy === 'trend';
+  const minBars = isTrend ? 100 : 35;
+
+  if (values.length < minBars) {
     return {
       planName,
       dates,
       values,
       volatility: 0,
       isLowVol: false,
+      isDefensive: isDefensiveAsset(planName),
       isUnreliable: true,
+      minBars,
+      strategyMode: strategy,
       crosses: [],
       currentHist: 0,
       latestCross: null,
       rsi: 50,
       ema20: [],
-      ema50: []
+      ema50: [],
+      ema100: [],
+      ema200: []
     };
   }
 
@@ -361,52 +386,88 @@ export function analyzePlanTechnical(chartData, planName) {
   const variance = returns.reduce((a, r) => a + (r - mean) ** 2, 0) / (returns.length - 1);
   const volatility = Math.sqrt(variance) * Math.sqrt(252);
   const isLowVol = volatility < 0.02; // Under 2% volatility: e.g. money market & short debt
+  const isDefensive = isDefensiveAsset(planName) || isLowVol;
 
   const ema12 = calcEMA(values, 12);
   const ema26 = calcEMA(values, 26);
   const ema20 = calcEMA(values, 20);
   const ema50 = calcEMA(values, 50);
+  const ema100 = calcEMA(values, 100);
+  const ema200 = calcEMA(values, 200);
   const macd = values.map((_, i) => ema12[i] - ema26[i]);
   const signal = calcEMA(macd, 9);
   const hist = macd.map((v, i) => v - signal[i]);
   const rsiSeries = calcRSISeries(values, 14);
   const rsi = rsiSeries[rsiSeries.length - 1] ?? 50;
 
-  // Smart 3-Layer Filter: Dual-EMA Trend + MACD Momentum + RSI Health + Cooldown Guard
   const crosses = [];
   let currentState = null; // 'golden' | 'dead'
   let lastSignalIdx = -999;
-  const cooldown = 12; // 12 trading bars to eliminate noisy whipsaw signals
 
-  for (let i = 25; i < values.length; i++) {
-    const price = values[i];
-    const e20 = ema20[i];
-    const e50 = ema50[i];
-    const h = hist[i];
-    const r = rsiSeries[i];
+  // Defensive plans suppress noisy technical signals completely
+  if (!isDefensive) {
+    if (isTrend) {
+      // Macro Trend Strategy: EMA 100 / EMA 200
+      const cooldown = 15; // 15 trading bars to ensure trend stability
+      const startIdx = Math.min(80, Math.max(0, values.length - 1));
 
-    const canSignal = (i - lastSignalIdx) >= cooldown;
+      for (let i = startIdx; i < values.length; i++) {
+        const price = values[i];
+        const e100 = ema100[i];
+        const e200 = ema200[i];
+        const prevE100 = i > 0 ? ema100[i - 1] : e100;
+        const canSignal = (i - lastSignalIdx) >= cooldown;
 
-    // Buy condition (Golden Cross / สะสม):
-    // 1. Major Trend Alignment: EMA 20 is above or equal to EMA 50
-    // 2. Price confirmation: Price is above EMA 20
-    // 3. Momentum confirmation: MACD Histogram is positive (> 0)
-    // 4. Strength confirmation: RSI is healthy (>= 48)
-    const buyCond = (e20 >= e50) && (price >= e20) && (h > 0) && (r >= 48);
+        // Macro Golden Cross: EMA 100 >= EMA 200 and Price >= EMA 100
+        const buyCond = (e100 >= e200) && (price >= e100);
+        // Macro Dead Cross: EMA 100 < EMA 200, or breakdown below EMA 200 with weakening EMA 100
+        const sellCond = (e100 < e200) || (price < e200 && e100 < prevE100);
 
-    // Sell condition (Dead Cross / พักเงิน):
-    // 1. Major Trend Reversal: EMA 20 crosses below EMA 50, OR
-    // 2. Severe Breakdown: Price drops below EMA 50 with negative MACD Momentum (hist < 0)
-    const sellCond = (e20 < e50) || (price < e50 && h < 0);
+        if (currentState !== 'golden' && buyCond && canSignal) {
+          crosses.push({ type: 'golden', date: dates[i], price: values[i], index: i });
+          currentState = 'golden';
+          lastSignalIdx = i;
+        } else if (currentState === 'golden' && sellCond && canSignal) {
+          crosses.push({ type: 'dead', date: dates[i], price: values[i], index: i });
+          currentState = 'dead';
+          lastSignalIdx = i;
+        }
+      }
+    } else {
+      // Swing Strategy (Default): Smart 3-Layer Filter: Dual-EMA Trend + MACD Momentum + RSI Health + Cooldown Guard
+      const cooldown = 12; // 12 trading bars to eliminate noisy whipsaw signals
 
-    if (currentState !== 'golden' && buyCond && canSignal) {
-      crosses.push({ type: 'golden', date: dates[i], price: values[i], index: i });
-      currentState = 'golden';
-      lastSignalIdx = i;
-    } else if (currentState === 'golden' && sellCond && canSignal) {
-      crosses.push({ type: 'dead', date: dates[i], price: values[i], index: i });
-      currentState = 'dead';
-      lastSignalIdx = i;
+      for (let i = 25; i < values.length; i++) {
+        const price = values[i];
+        const e20 = ema20[i];
+        const e50 = ema50[i];
+        const h = hist[i];
+        const r = rsiSeries[i];
+
+        const canSignal = (i - lastSignalIdx) >= cooldown;
+
+        // Buy condition (Golden Cross / สะสม):
+        // 1. Major Trend Alignment: EMA 20 is above or equal to EMA 50
+        // 2. Price confirmation: Price is above EMA 20
+        // 3. Momentum confirmation: MACD Histogram is positive (> 0)
+        // 4. Strength confirmation: RSI is healthy (>= 48)
+        const buyCond = (e20 >= e50) && (price >= e20) && (h > 0) && (r >= 48);
+
+        // Sell condition (Dead Cross / พักเงิน):
+        // 1. Major Trend Reversal: EMA 20 crosses below EMA 50, OR
+        // 2. Severe Breakdown: Price drops below EMA 50 with negative MACD Momentum (hist < 0)
+        const sellCond = (e20 < e50) || (price < e50 && h < 0);
+
+        if (currentState !== 'golden' && buyCond && canSignal) {
+          crosses.push({ type: 'golden', date: dates[i], price: values[i], index: i });
+          currentState = 'golden';
+          lastSignalIdx = i;
+        } else if (currentState === 'golden' && sellCond && canSignal) {
+          crosses.push({ type: 'dead', date: dates[i], price: values[i], index: i });
+          currentState = 'dead';
+          lastSignalIdx = i;
+        }
+      }
     }
   }
 
@@ -417,11 +478,16 @@ export function analyzePlanTechnical(chartData, planName) {
     values,
     volatility,
     isLowVol,
+    isDefensive,
     isUnreliable: false,
+    minBars,
+    strategyMode: strategy,
     ema12,
     ema26,
     ema20,
     ema50,
+    ema100,
+    ema200,
     macd,
     signal,
     hist,
@@ -811,12 +877,16 @@ export class ChartView {
     this.chart = null;
     this.showSignalOverlay = (typeof localStorage !== 'undefined' ? localStorage.getItem('gpf_show_signals') !== 'false' : true);
     this.showEma = (typeof localStorage !== 'undefined' ? localStorage.getItem('gpf_show_ema') !== 'false' : true);
+    this.strategyMode = (typeof localStorage !== 'undefined' ? localStorage.getItem('gpf_strategy_mode') || 'swing' : 'swing');
     this.chartEngine = (typeof localStorage !== 'undefined' ? localStorage.getItem('gpf_chart_engine') || 'apex' : 'apex');
     this.tvChart = null;
+    this.momentumModal = null;
     this.ApexCharts = options.ApexCharts || null;
     this._handleClick = this._handleClick.bind(this);
     this._handlePinsChanged = this._handlePinsChanged.bind(this);
     this._handleChartDblClick = this._handleChartDblClick.bind(this);
+    this.setStrategy = this.setStrategy.bind(this);
+    this.openMomentumLeaderboard = this.openMomentumLeaderboard.bind(this);
   }
 
   setPrimaryPlan(planName) {
@@ -893,14 +963,27 @@ export class ChartView {
               ${btnsHtml}
             </div>
 
+            <!-- Strategy Selector Group -->
+            <div class="strategy-selector-group" role="group" aria-label="เลือกกลยุทธ์การลงทุน">
+              <button class="strategy-btn ${this.strategyMode === 'swing' ? 'is-active' : ''}" id="btn-strategy-swing" title="กลยุทธ์สวิงเทรดรอบสั้น 1-3 เดือน (EMA 20/50 + MACD)">
+                <span>⚡ สวิงเทรด (20/50)</span>
+              </button>
+              <button class="strategy-btn is-trend ${this.strategyMode === 'trend' ? 'is-active' : ''}" id="btn-strategy-trend" title="กลยุทธ์รันเทรนด์ใหญ่รอบ 6-12 เดือน (EMA 100/200)">
+                <span>🌊 รันเทรนด์ (100/200)</span>
+              </button>
+              <button class="strategy-btn" id="btn-open-momentum" title="ตารางจัดอันดับโมเมนตัม 15 แผน กบข. (3M / 6M / 12M)">
+                <span>🏆 โมเมนตัม 15 แผน</span>
+              </button>
+            </div>
+
             <!-- Signal Overlay Toggle Button -->
             <button class="chart-action-btn ${this.showSignalOverlay ? 'is-active' : ''}" id="btn-toggle-signals" title="เปิด/ปิด จุดสัญญาณซื้อขาย (Overlay) บนเส้นกราฟ">
               <span>🟢 สัญญาณซื้อ/ขาย</span>
             </button>
 
             <!-- EMA Overlay Toggle Button -->
-            <button class="chart-action-btn ${this.showEma ? 'is-active' : ''}" id="btn-toggle-ema" title="เปิด/ปิด เส้นค่าเฉลี่ยแนวโน้ม EMA 20 (ทอง) / EMA 50 (ฟ้า) บนกราฟ">
-              <span>📈 EMA 20/50</span>
+            <button class="chart-action-btn ${this.showEma ? 'is-active' : ''}" id="btn-toggle-ema" title="เปิด/ปิด เส้นค่าเฉลี่ยแนวโน้มบนกราฟ">
+              <span>📈 ${this.strategyMode === 'trend' ? 'EMA 100/200' : 'EMA 20/50'}</span>
             </button>
 
             <!-- TradingView Toggle Button -->
@@ -972,12 +1055,48 @@ export class ChartView {
     if (engineBtn) {
       engineBtn.addEventListener('click', this._handleClick);
     }
+
+    const stratSwingBtn = this.container.querySelector
+      ? this.container.querySelector('#btn-strategy-swing')
+      : null;
+    if (stratSwingBtn) {
+      stratSwingBtn.addEventListener('click', this._handleClick);
+    }
+
+    const stratTrendBtn = this.container.querySelector
+      ? this.container.querySelector('#btn-strategy-trend')
+      : null;
+    if (stratTrendBtn) {
+      stratTrendBtn.addEventListener('click', this._handleClick);
+    }
+
+    const momentumBtn = this.container.querySelector
+      ? this.container.querySelector('#btn-open-momentum')
+      : null;
+    if (momentumBtn) {
+      momentumBtn.addEventListener('click', this._handleClick);
+    }
   }
 
   _handleClick(e) {
     const target = e.target || e;
-    const btn = target.closest ? target.closest('.timeframe-btn, .mode-btn, #btn-chart-autofit, #btn-toggle-signals, #btn-toggle-ema, #btn-toggle-engine') : target;
+    const btn = target.closest ? target.closest('.timeframe-btn, .mode-btn, .strategy-btn, #btn-chart-autofit, #btn-toggle-signals, #btn-toggle-ema, #btn-toggle-engine, #btn-strategy-swing, #btn-strategy-trend, #btn-open-momentum') : target;
     if (!btn) return;
+
+    if (btn.id === 'btn-strategy-swing' || (btn.closest && btn.closest('#btn-strategy-swing'))) {
+      this.setStrategy('swing');
+      return;
+    }
+
+    if (btn.id === 'btn-strategy-trend' || (btn.closest && btn.closest('#btn-strategy-trend'))) {
+      this.setStrategy('trend');
+      return;
+    }
+
+    if (btn.id === 'btn-open-momentum' || (btn.closest && btn.closest('#btn-open-momentum'))) {
+      this.openMomentumLeaderboard();
+      return;
+    }
 
     if (btn.id === 'btn-toggle-signals' || (btn.closest && btn.closest('#btn-toggle-signals'))) {
       this.toggleSignalOverlay();
@@ -1248,7 +1367,7 @@ export class ChartView {
       pinPrice = Number(calculatedVal.toFixed(4));
     } else {
       const planSummary = this.summaryData?.plans?.[targetPlan];
-      pinPrice = planSummary?.current_nav || 30.0;
+      pinPrice = planSummary?.latestNav || planSummary?.current_nav || 30.0;
     }
 
     if (!pinPrice || isNaN(pinPrice) || pinPrice <= 0) return;
@@ -1560,19 +1679,20 @@ export class ChartView {
     }
 
     const targetPlan = this.primaryPlan || (this.activePlans && this.activePlans.size > 0 ? Array.from(this.activePlans)[0] : 'แผนเชิงรุก 35');
-    const analysis = analyzePlanTechnical(this.chartData, targetPlan);
+    const analysis = analyzePlanTechnical(this.chartData, targetPlan, this.strategyMode);
     if (!analysis) {
       bannerEl.innerHTML = '';
       return;
     }
 
-    if (analysis.isLowVol) {
+    // Defensive / Cash asset guard
+    if (analysis.isDefensive || analysis.isLowVol) {
       bannerEl.innerHTML = `
-        <div class="signal-tag tag-low-vol">🛡️ มั่นคง</div>
+        <div class="signal-tag tag-low-vol" style="background: rgba(156, 163, 175, 0.15); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.3);">🛡️ สินทรัพย์พักเงิน</div>
         <div class="signal-metrics-row">
-          <span>ความผันผวนต่ำ</span>
+          <span>ความผันผวนต่ำ (${(analysis.volatility * 100).toFixed(2)}%)</span>
           <span class="signal-sep">·</span>
-          <span>Vol: ${(analysis.volatility * 100).toFixed(2)}%</span>
+          <span>ตราสารหนี้/เงินฝาก ไม่แนะนำใช้สัญญาณเทคนิคอล เหมาะสำหรับพักเงิน</span>
         </div>
       `;
       return;
@@ -1582,33 +1702,111 @@ export class ChartView {
       bannerEl.innerHTML = `
         <div class="signal-tag tag-neutral">⏳ ประวัติน้อย</div>
         <div class="signal-metrics-row">
-          <span>ต้องการ 60 วันทำการ</span>
+          <span>ต้องการข้อมูลอย่างน้อย ${analysis.minBars || (this.strategyMode === 'trend' ? 100 : 35)} วันทำการ</span>
         </div>
       `;
       return;
     }
 
-    const isBullish = analysis.latestCross ? analysis.latestCross.type === 'golden' : analysis.currentHist > 0;
+    const isTrend = this.strategyMode === 'trend';
+    const isBullish = analysis.latestCross
+      ? analysis.latestCross.type === 'golden'
+      : (isTrend ? (analysis.values[analysis.values.length - 1] >= (analysis.ema100[analysis.ema100.length - 1] || 0)) : analysis.currentHist > 0);
+
     const lastCross = analysis.latestCross;
     let crossDetail = '';
     if (lastCross) {
       const isGolden = lastCross.type === 'golden';
       const parts = lastCross.date?.split('-') || [];
       const dStr = parts.length === 3 ? `${parseInt(parts[2], 10)} ${THAI_MONTHS_SHORT[parseInt(parts[1], 10) - 1] || parts[1]}` : lastCross.date;
-      crossDetail = `${isGolden ? 'Golden Cross' : 'Dead Cross'} (${dStr})`;
+      const crossName = isGolden
+        ? (isTrend ? 'Macro Golden Cross' : 'Golden Cross')
+        : (isTrend ? 'Macro Dead Cross' : 'Dead Cross');
+      crossDetail = `${crossName} (${dStr})`;
     }
 
-    bannerEl.innerHTML = `
-      <div class="signal-tag ${isBullish ? 'tag-buy' : 'tag-sell'}" title="${isBullish ? 'จังหวะเข้าสะสม (EMA + MACD + RSI ยืนยันรอบขาขึ้น)' : 'จังหวะชะลอ/พักเงิน (หลุดแนวโน้ม EMA20 / ต่ำกว่า Signal)'}">
-        ${isBullish ? '🟢 ซื้อ (สะสม)' : '🔴 ขาย (พักเงิน)'}
-      </div>
-      <div class="signal-metrics-row">
-        ${crossDetail ? `<span class="signal-cross">${crossDetail}</span><span class="signal-sep">·</span>` : ''}
-        <span class="signal-hist">Hist: <strong>${analysis.currentHist >= 0 ? '+' : ''}${analysis.currentHist.toFixed(4)}</strong></span>
-        <span class="signal-sep">·</span>
-        <span class="signal-rsi">RSI: <strong>${analysis.rsi.toFixed(1)}</strong></span>
-      </div>
-    `;
+    if (isTrend) {
+      const lastIdx = analysis.values.length - 1;
+      const e100 = analysis.ema100?.[lastIdx];
+      const e200 = analysis.ema200?.[lastIdx];
+      bannerEl.innerHTML = `
+        <div class="signal-tag ${isBullish ? 'tag-buy' : 'tag-sell'}" title="${isBullish ? 'รันเทรนด์ใหญ่ขาขึ้น (EMA 100 ยืนเหนือ EMA 200)' : 'ชะลอการลงทุน/พักเงิน (หลุดแนวโน้มใหญ่ EMA 100/200)'}">
+          ${isBullish ? '🌊 รันเทรนด์ขาขึ้น' : '🔴 ชะลอ/พักเงิน'}
+        </div>
+        <div class="signal-metrics-row">
+          <span class="signal-strategy" style="color: #c084fc; font-weight: 700;">[รันเทรนด์ใหญ่ 6-12M]</span>
+          <span class="signal-sep">·</span>
+          ${crossDetail ? `<span class="signal-cross">${crossDetail}</span><span class="signal-sep">·</span>` : ''}
+          <span>EMA100: <strong style="color: #ea580c;">${e100 ? e100.toFixed(2) : '-'}</strong></span>
+          <span class="signal-sep">·</span>
+          <span>EMA200: <strong style="color: #8b5cf6;">${e200 ? e200.toFixed(2) : '-'}</strong></span>
+        </div>
+      `;
+    } else {
+      bannerEl.innerHTML = `
+        <div class="signal-tag ${isBullish ? 'tag-buy' : 'tag-sell'}" title="${isBullish ? 'จังหวะเข้าสะสม (EMA + MACD + RSI ยืนยันรอบขาขึ้น)' : 'จังหวะชะลอ/พักเงิน (หลุดแนวโน้ม EMA20 / ต่ำกว่า Signal)'}">
+          ${isBullish ? '🟢 ซื้อ (สะสม)' : '🔴 ขาย (พักเงิน)'}
+        </div>
+        <div class="signal-metrics-row">
+          <span class="signal-strategy" style="color: #fbbf24; font-weight: 700;">[สวิงเทรด 1-3M]</span>
+          <span class="signal-sep">·</span>
+          ${crossDetail ? `<span class="signal-cross">${crossDetail}</span><span class="signal-sep">·</span>` : ''}
+          <span class="signal-hist">Hist: <strong>${analysis.currentHist >= 0 ? '+' : ''}${analysis.currentHist.toFixed(4)}</strong></span>
+          <span class="signal-sep">·</span>
+          <span class="signal-rsi">RSI: <strong>${analysis.rsi.toFixed(1)}</strong></span>
+        </div>
+      `;
+    }
+  }
+
+  setStrategy(mode) {
+    if (mode !== 'swing' && mode !== 'trend') return;
+    if (this.strategyMode === mode) return;
+
+    this.strategyMode = mode;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('gpf_strategy_mode', mode);
+    }
+
+    const swingBtn = this.container ? this.container.querySelector('#btn-strategy-swing') : null;
+    const trendBtn = this.container ? this.container.querySelector('#btn-strategy-trend') : null;
+    const emaBtn = this.container ? this.container.querySelector('#btn-toggle-ema') : null;
+
+    if (swingBtn) swingBtn.classList.toggle('is-active', mode === 'swing');
+    if (trendBtn) trendBtn.classList.toggle('is-active', mode === 'trend');
+    if (emaBtn) {
+      emaBtn.innerHTML = `<span>📈 ${mode === 'trend' ? 'EMA 100/200' : 'EMA 20/50'}</span>`;
+    }
+
+    this.updateMacdSignalBanner();
+    if (this.chartEngine === 'tradingview') {
+      this.renderTradingViewChart();
+    }
+    showToast(mode === 'trend' ? '🌊 สลับใช้กลยุทธ์รันเทรนด์ใหญ่ (EMA 100/200) เรียบร้อย' : '⚡ สลับใช้กลยุทธ์สวิงเทรด (EMA 20/50) เรียบร้อย');
+  }
+
+  openMomentumLeaderboard() {
+    if (!this.momentumModal) {
+      const modalContainer = (typeof document !== 'undefined')
+        ? (document.querySelector('#modals-container') || document.body)
+        : null;
+      if (modalContainer) {
+        this.momentumModal = renderMomentumModal(modalContainer, {
+          summaryData: this.summaryData,
+          chartData: this.chartData,
+          onSelectPlan: (planName) => {
+            this.setPrimaryPlan(planName);
+            showToast(`📊 แสดงกราฟ ${planName} เรียบร้อย`);
+          }
+        });
+      }
+    } else {
+      this.momentumModal.setData(this.summaryData, this.chartData);
+    }
+
+    if (this.momentumModal) {
+      this.momentumModal.open();
+    }
   }
 
   toggleEma() {
@@ -1627,8 +1825,9 @@ export class ChartView {
     if (this.chartEngine === 'tradingview') {
       this.renderTradingViewChart();
     }
+    const label = this.strategyMode === 'trend' ? 'EMA 100 / EMA 200' : 'EMA 20 / EMA 50';
     if (this.showEma) {
-      showToast('📈 เปิดเส้นค่าเฉลี่ย EMA 20 / EMA 50 เรียบร้อย');
+      showToast(`📈 เปิดเส้นค่าเฉลี่ย ${label} เรียบร้อย`);
     } else {
       showToast('📈 ปิดเส้นค่าเฉลี่ย EMA เรียบร้อย');
     }
@@ -1710,6 +1909,7 @@ export class ChartView {
         activePlans: this.activePlans,
         showSignals: this.showSignalOverlay,
         showEma: this.showEma,
+        strategy: this.strategyMode,
         onDoubleTapPin: (plan, price) => {
           pinService.addPin(plan, price, 'ดับเบิลคลิกจาก TradingView');
           showToast(`📌 ปักหมุด ${plan} ที่ราคา ${price.toFixed(4)} เรียบร้อย`);
@@ -1719,7 +1919,7 @@ export class ChartView {
     }
 
     const targetPlan = this.primaryPlan || (this.activePlans && this.activePlans.size > 0 ? Array.from(this.activePlans)[0] : 'แผนเชิงรุก 35');
-    const analysis = analyzePlanTechnical(this.chartData, targetPlan);
+    const analysis = analyzePlanTechnical(this.chartData, targetPlan, this.strategyMode);
     const pins = pinService.getPinsForPlan(targetPlan);
 
     this.tvChart.updateData({
@@ -1733,6 +1933,7 @@ export class ChartView {
       theme: this.currentTheme,
       showSignals: this.showSignalOverlay,
       showEma: this.showEma,
+      strategy: this.strategyMode,
       analysis,
       pins
     });
@@ -1757,6 +1958,11 @@ export class ChartView {
    * Clean up chart and event listeners
    */
   destroy() {
+    if (this.momentumModal) {
+      try { this.momentumModal.destroy(); } catch (err) {}
+      this.momentumModal = null;
+    }
+
     if (this.tvChart) {
       try {
         this.tvChart.destroy();

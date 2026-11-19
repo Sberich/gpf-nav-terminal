@@ -64,8 +64,8 @@ export class TerminalStatusModal {
 
             <div class="status-card">
               <div class="status-card-label">⏱️ รอบตรวจอัตโนมัติ (AUTO SCHEDULE)</div>
-              <div class="status-card-val">
-                11:00 น. & 17:00 น.
+              <div class="status-card-val" style="font-size: 13.5px; line-height: 1.4;">
+                5 รอบ (09:45, 10:15, 11:00, 12:30, 17:00)
               </div>
               <div class="status-card-sub">จันทร์ - ศุกร์ (วันทำการ)</div>
             </div>

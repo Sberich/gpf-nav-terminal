@@ -43,6 +43,9 @@ export class TradingViewChart {
     this.activePlans = new Set(options.activePlans || ['แผนเชิงรุก 35']);
     this.showSignals = options.showSignals !== false;
     this.showEma = options.showEma !== false;
+    this.strategyMode = options.strategy || 'swing';
+    this.emaFastSeries = null;
+    this.emaSlowSeries = null;
     this.ema20Series = null;
     this.ema50Series = null;
 
@@ -195,6 +198,7 @@ export class TradingViewChart {
     theme = 'dark',
     showSignals = true,
     showEma = true,
+    strategy = 'swing',
     analysis = null,
     pins = []
   }) {
@@ -207,6 +211,7 @@ export class TradingViewChart {
     this.activePlans = activePlans ? new Set(activePlans) : this.activePlans;
     this.showSignals = showSignals;
     this.showEma = showEma;
+    this.strategyMode = strategy || this.strategyMode;
     this.cachedAnalysis = analysis;
     this.cachedPins = pins;
     this.chartData = chartData;
@@ -221,6 +226,14 @@ export class TradingViewChart {
       try { this.chart.removeSeries(sec); } catch (e) {}
     }
     this.secondarySeriesList = [];
+    if (this.emaFastSeries) {
+      try { this.chart.removeSeries(this.emaFastSeries); } catch (e) {}
+      this.emaFastSeries = null;
+    }
+    if (this.emaSlowSeries) {
+      try { this.chart.removeSeries(this.emaSlowSeries); } catch (e) {}
+      this.emaSlowSeries = null;
+    }
     if (this.ema20Series) {
       try { this.chart.removeSeries(this.ema20Series); } catch (e) {}
       this.ema20Series = null;
@@ -324,68 +337,82 @@ export class TradingViewChart {
       this.secondarySeriesList.push(secSeries);
     }
 
-    // 2.5 Add Dual EMA Lines (EMA 20 Gold, EMA 50 Sky Blue) on primary plan in NAV mode
-    if (this.showEma && !isPct && analysis && analysis.ema20 && analysis.ema50 && analysis.dates) {
-      const ema20Points = [];
-      const ema50Points = [];
+    // 2.5 Add Dual EMA Lines (EMA 20/50 for Swing, EMA 100/200 for Trend) on primary plan in NAV mode
+    const isTrend = this.strategyMode === 'trend';
+    const fastArr = isTrend ? analysis?.ema100 : analysis?.ema20;
+    const slowArr = isTrend ? analysis?.ema200 : analysis?.ema50;
+    const fastTitle = isTrend ? 'EMA 100' : 'EMA 20';
+    const slowTitle = isTrend ? 'EMA 200' : 'EMA 50';
+    const fastColor = isTrend ? '#ea580c' : '#f59e0b'; // Orange for EMA100, Gold for EMA20
+    const slowColor = isTrend ? '#8b5cf6' : '#388bfd'; // Purple for EMA200, Sky Blue for EMA50
+
+    if (this.showEma && !isPct && analysis && fastArr && slowArr && analysis.dates) {
+      const fastPoints = [];
+      const slowPoints = [];
       const primaryDatesSet = new Set(primaryData.map(d => d.time));
 
       for (let i = 0; i < analysis.dates.length; i++) {
         const dStr = analysis.dates[i];
         if (!primaryDatesSet.has(dStr)) continue;
 
-        const val20 = analysis.ema20[i];
-        const val50 = analysis.ema50[i];
+        const valFast = fastArr[i];
+        const valSlow = slowArr[i];
 
-        if (val20 != null && !isNaN(val20) && val20 > 0) {
-          ema20Points.push({ time: dStr, value: Number(val20.toFixed(4)) });
+        if (valFast != null && !isNaN(valFast) && valFast > 0) {
+          fastPoints.push({ time: dStr, value: Number(valFast.toFixed(4)) });
         }
-        if (val50 != null && !isNaN(val50) && val50 > 0) {
-          ema50Points.push({ time: dStr, value: Number(val50.toFixed(4)) });
+        if (valSlow != null && !isNaN(valSlow) && valSlow > 0) {
+          slowPoints.push({ time: dStr, value: Number(valSlow.toFixed(4)) });
         }
       }
 
-      if (ema20Points.length > 0) {
-        this.ema20Series = this.chart.addSeries(LineSeries, {
-          color: '#f59e0b', // Gold / Amber
+      if (fastPoints.length > 0) {
+        this.emaFastSeries = this.chart.addSeries(LineSeries, {
+          color: fastColor,
           lineWidth: 1.5,
           lineStyle: LineStyle.Solid,
           priceLineVisible: false,
           lastValueVisible: false,
           crosshairMarkerVisible: false,
-          title: 'EMA 20'
+          title: fastTitle
         });
-        this.ema20Series.setData(ema20Points);
+        this.emaFastSeries.setData(fastPoints);
+        this.ema20Series = this.emaFastSeries;
       }
 
-      if (ema50Points.length > 0) {
-        this.ema50Series = this.chart.addSeries(LineSeries, {
-          color: '#388bfd', // Sky Blue
+      if (slowPoints.length > 0) {
+        this.emaSlowSeries = this.chart.addSeries(LineSeries, {
+          color: slowColor,
           lineWidth: 1.5,
           lineStyle: LineStyle.Solid,
           priceLineVisible: false,
           lastValueVisible: false,
           crosshairMarkerVisible: false,
-          title: 'EMA 50'
+          title: slowTitle
         });
-        this.ema50Series.setData(ema50Points);
+        this.emaSlowSeries.setData(slowPoints);
+        this.ema50Series = this.emaSlowSeries;
       }
     }
 
-    // 3. Add Tactical Signal Markers (Overlay)
-    if (this.showSignals && analysis && analysis.crosses && analysis.crosses.length > 0 && !analysis.isLowVol) {
+    // 3. Add Tactical Signal Markers (Overlay) - Suppressed for Defensive / Cash plans
+    if (this.showSignals && analysis && analysis.crosses && analysis.crosses.length > 0 && !analysis.isLowVol && !analysis.isDefensive) {
       const markers = [];
       const crossDates = new Set(primaryData.map(d => d.time));
 
       for (const cross of analysis.crosses) {
         if (!crossDates.has(cross.date)) continue;
         const isGolden = cross.type === 'golden';
+        const label = isGolden
+          ? (isTrend ? 'รันเทรนด์' : 'ซื้อ')
+          : (isTrend ? 'พักเงิน' : 'ขาย');
+
         markers.push({
           time: cross.date,
           position: isGolden ? 'belowBar' : 'aboveBar',
           color: isGolden ? '#10B981' : '#EF4444',
           shape: isGolden ? 'arrowUp' : 'arrowDown',
-          text: isGolden ? 'ซื้อ' : 'ขาย',
+          text: label,
           size: 1.2
         });
       }
@@ -532,12 +559,28 @@ export class TradingViewChart {
         : `${val.toFixed(4)} ฿`;
     }
 
-    // Check if this date had a tactical cross
+    // Check if this date had a tactical cross or defensive asset
     let crossBadge = '';
-    if (this.cachedAnalysis?.crosses && dateStr) {
+    const isTrend = this.strategyMode === 'trend';
+
+    if (this.cachedAnalysis?.isDefensive || this.cachedAnalysis?.isLowVol) {
+      crossBadge = `<span style="
+        margin-left: 6px;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        background: rgba(156, 163, 175, 0.2);
+        color: #9ca3af;
+        border: 1px solid #9ca3af;
+      ">🛡️ สินทรัพย์พักเงิน</span>`;
+    } else if (this.cachedAnalysis?.crosses && dateStr) {
       const c = this.cachedAnalysis.crosses.find(x => x.date === dateStr);
       if (c) {
         const isGolden = c.type === 'golden';
+        const label = isGolden
+          ? (isTrend ? '🟢 Macro Golden Cross (เทรนด์ขึ้น)' : '🟢 Golden Cross (ซื้อ)')
+          : (isTrend ? '🔴 Macro Dead Cross (เทรนด์ลง)' : '🔴 Dead Cross (ขาย)');
         crossBadge = `<span style="
           margin-left: 6px;
           padding: 1px 6px;
@@ -547,18 +590,26 @@ export class TradingViewChart {
           background: ${isGolden ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'};
           color: ${isGolden ? '#10B981' : '#EF4444'};
           border: 1px solid ${isGolden ? '#10B981' : '#EF4444'};
-        ">${isGolden ? '🟢 Golden Cross (ซื้อ)' : '🔴 Dead Cross (ขาย)'}</span>`;
+        ">${label}</span>`;
       }
     }
 
     let emaBadge = '';
-    if (this.showEma && !isPct && this.cachedAnalysis?.ema20 && this.cachedAnalysis?.ema50 && dateStr) {
+    if (this.showEma && !isPct && this.cachedAnalysis?.dates && dateStr) {
       const idx = this.cachedAnalysis.dates?.indexOf(dateStr);
       if (idx !== -1 && idx != null) {
-        const val20 = this.cachedAnalysis.ema20[idx];
-        const val50 = this.cachedAnalysis.ema50[idx];
-        if (val20 && val50) {
-          emaBadge = ` · <span style="color: #f59e0b; font-weight: 600;">EMA20: ${val20.toFixed(2)}</span> · <span style="color: #388bfd; font-weight: 600;">EMA50: ${val50.toFixed(2)}</span>`;
+        const fastArr = isTrend ? this.cachedAnalysis.ema100 : this.cachedAnalysis.ema20;
+        const slowArr = isTrend ? this.cachedAnalysis.ema200 : this.cachedAnalysis.ema50;
+        const fastLabel = isTrend ? 'EMA100' : 'EMA20';
+        const slowLabel = isTrend ? 'EMA200' : 'EMA50';
+        const fastColor = isTrend ? '#ea580c' : '#f59e0b';
+        const slowColor = isTrend ? '#8b5cf6' : '#388bfd';
+
+        const valFast = fastArr ? fastArr[idx] : null;
+        const valSlow = slowArr ? slowArr[idx] : null;
+
+        if (valFast && valSlow) {
+          emaBadge = ` · <span style="color: ${fastColor}; font-weight: 600;">${fastLabel}: ${valFast.toFixed(2)}</span> · <span style="color: ${slowColor}; font-weight: 600;">${slowLabel}: ${valSlow.toFixed(2)}</span>`;
         }
       }
     }
@@ -667,6 +718,8 @@ export class TradingViewChart {
     }
     this.primarySeries = null;
     this.secondarySeriesList = [];
+    this.emaFastSeries = null;
+    this.emaSlowSeries = null;
     this.ema20Series = null;
     this.ema50Series = null;
     this.markersPrimitive = null;

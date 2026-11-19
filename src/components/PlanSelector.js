@@ -375,7 +375,10 @@ export class PlanSelector {
     const pinBtn = this.container.querySelector ? this.container.querySelector('#btn-open-pins') : null;
     if (pinBtn && typeof pinBtn.addEventListener === 'function') {
       pinBtn.addEventListener('click', () => {
-        const pinEvent = new CustomEvent('open-pin-modal', { bubbles: true });
+        const pinEvent = new CustomEvent('open-pin-modal', {
+          bubbles: true,
+          detail: { plan: this.primaryPlan }
+        });
         document.dispatchEvent(pinEvent);
         if (typeof window !== 'undefined' && window.dispatchEvent) window.dispatchEvent(pinEvent);
       });
